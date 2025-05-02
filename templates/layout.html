@@ -20,11 +20,11 @@
                 <div></div>
             </div>
             <ul class="nav-links">
-                <li><a href="#"><i class="fas fa-utensils"></i> Cocina</a></li>
-                <li><a href="#"><i class="fas fa-chart-line"></i> Ventas</a></li>
+                <li><a href="{{ url_for('recepciones_web.formulario') }}"><i class="fas fa-utensils"></i> Cocina</a></li>
+                <li><a href="{{ url_for('ventas_web.lista') }}"><i class="fas fa-chart-line"></i> Ventas</a></li>
                 <li><a href="{{ url_for('ingredientes_web.index') }}"><i class="fas fa-carrot"></i> Ingredientes</a></li>
                 <li><a href="{{ url_for('articulos_web.index') }}"><i class="fas fa-hamburger"></i> Artículos</a></li>
-                <li><a href="#"><i class="fas fa-file-alt"></i> Reportes</a></li>
+                <li><a href="{{ url_for('inventario_web.dashboard') }}"><i class="fas fa-warehouse"></i> Inventario</a></li>
             </ul>
         </nav>
     </header>

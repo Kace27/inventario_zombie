@@ -52,6 +52,7 @@ import routes.articulos
 import routes.composicion
 import routes.ventas
 import routes.recepciones
+import routes.web
 
 # Register API blueprints
 app.register_blueprint(routes.ingredientes.ingredientes_bp)
@@ -63,6 +64,23 @@ app.register_blueprint(routes.recepciones.bp)
 # Register web UI blueprints
 app.register_blueprint(routes.ingredientes.ingredientes_web_bp)
 app.register_blueprint(routes.articulos.articulos_web_bp)
+routes.web.register_web_blueprints(app)
+
+def verify_schema():
+    """Verify the database schema and add missing columns if needed"""
+    with app.app_context():
+        db = get_db()
+        # Check for categoria column in Ingredientes table
+        try:
+            cursor = db.execute("PRAGMA table_info(Ingredientes)")
+            columns = [row[1] for row in cursor.fetchall()]
+            if 'categoria' not in columns:
+                print("Adding 'categoria' column to Ingredientes table...")
+                db.execute("ALTER TABLE Ingredientes ADD COLUMN categoria TEXT")
+                db.commit()
+                print("Added 'categoria' column successfully.")
+        except sqlite3.Error as e:
+            print(f"Schema verification error: {e}")
 
 if __name__ == '__main__':
     # Ensure the database is initialized
@@ -80,6 +98,8 @@ if __name__ == '__main__':
                 print("Database initialized successfully!")
             else:
                 print(f"Database already initialized with tables: {', '.join(tables)}")
+                # Verify schema has the expected columns
+                verify_schema()
         except sqlite3.Error as e:
             print(f"Database error: {e}")
     

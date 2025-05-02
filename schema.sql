@@ -11,7 +11,8 @@ CREATE TABLE Ingredientes (
     unidad_medida TEXT NOT NULL,
     precio_compra REAL,
     cantidad_actual REAL NOT NULL DEFAULT 0,
-    stock_minimo REAL
+    stock_minimo REAL,
+    categoria TEXT
 );
 
 CREATE TABLE ArticulosVendidos (

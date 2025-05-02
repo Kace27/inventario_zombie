@@ -1,0 +1,550 @@
+{% extends "layout.html" %}
+
+{% block title %}Visualización de Ventas - Inventario Zombie{% endblock %}
+
+{% block head %}
+<style>
+    .filter-container {
+        margin-bottom: 20px;
+        padding: 15px;
+        background-color: #f9f9f9;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+    }
+    .filter-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 10px;
+    }
+    .filter-item {
+        flex: 1;
+        min-width: 200px;
+    }
+    .filter-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+    .sales-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+    }
+    .sales-table th, .sales-table td {
+        padding: 10px;
+        border: 1px solid #ddd;
+        text-align: left;
+    }
+    .sales-table th {
+        background-color: #f5f5f5;
+        cursor: pointer;
+    }
+    .sales-table th:hover {
+        background-color: #e9e9e9;
+    }
+    .sales-table .sorted-asc::after {
+        content: " ▲";
+    }
+    .sales-table .sorted-desc::after {
+        content: " ▼";
+    }
+    .sales-table tbody tr:hover {
+        background-color: #f5f5f5;
+        cursor: pointer;
+    }
+    .pagination {
+        display: flex;
+        justify-content: center;
+        list-style: none;
+        padding: 0;
+        margin: 20px 0;
+    }
+    .pagination li {
+        margin: 0 5px;
+    }
+    .pagination a {
+        display: block;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        text-decoration: none;
+        color: #333;
+    }
+    .pagination a:hover {
+        background-color: #f5f5f5;
+    }
+    .pagination .active a {
+        background-color: #4CAF50;
+        color: white;
+        border-color: #4CAF50;
+    }
+    .pagination .disabled a {
+        color: #ccc;
+        pointer-events: none;
+    }
+    .detail-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+    }
+    .detail-modal-content {
+        position: relative;
+        background-color: white;
+        margin: 50px auto;
+        padding: 20px;
+        max-width: 800px;
+        border-radius: 5px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+    }
+    .detail-modal-close {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        font-size: 20px;
+        cursor: pointer;
+    }
+    .detail-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+    }
+    .detail-item {
+        margin-bottom: 10px;
+    }
+    .detail-label {
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    @media (max-width: 768px) {
+        .detail-grid {
+            grid-template-columns: 1fr;
+        }
+        .filter-item {
+            min-width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-container">
+    <div class="content-header">
+        <h1>Visualización de Ventas</h1>
+        <div class="content-actions">
+            <a href="{{ url_for('ventas_web.importar') }}" class="btn btn-primary">
+                <i class="fas fa-file-import"></i> Importar ventas
+            </a>
+        </div>
+    </div>
+    
+    <div class="filter-container">
+        <h3>Filtros</h3>
+        <form id="filterForm">
+            <div class="filter-row">
+                <div class="filter-item">
+                    <label for="fecha_inicio">Fecha inicio:</label>
+                    <input type="date" id="fecha_inicio" name="fecha_inicio" class="form-control">
+                </div>
+                <div class="filter-item">
+                    <label for="fecha_fin">Fecha fin:</label>
+                    <input type="date" id="fecha_fin" name="fecha_fin" class="form-control">
+                </div>
+            </div>
+            <div class="filter-row">
+                <div class="filter-item">
+                    <label for="articulo">Artículo:</label>
+                    <input type="text" id="articulo" name="articulo" class="form-control" placeholder="Buscar por nombre de artículo">
+                </div>
+                <div class="filter-item">
+                    <label for="categoria">Categoría:</label>
+                    <input type="text" id="categoria" name="categoria" class="form-control" placeholder="Buscar por categoría">
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button type="button" id="clearFiltersBtn" class="btn btn-secondary">Limpiar filtros</button>
+                <button type="submit" class="btn btn-primary">Aplicar filtros</button>
+            </div>
+        </form>
+    </div>
+    
+    <div id="salesTableContainer">
+        <div class="loading" id="loadingIndicator">Cargando datos...</div>
+        <table id="salesTable" class="sales-table" style="display: none;">
+            <thead>
+                <tr>
+                    <th data-sort="fecha">Fecha</th>
+                    <th data-sort="hora">Hora</th>
+                    <th data-sort="articulo">Artículo</th>
+                    <th data-sort="categoria">Categoría</th>
+                    <th data-sort="articulos_vendidos">Cantidad</th>
+                    <th data-sort="precio_unitario">Precio unitario</th>
+                    <th data-sort="total">Total</th>
+                </tr>
+            </thead>
+            <tbody id="salesTableBody">
+                <!-- Filled by JavaScript -->
+            </tbody>
+        </table>
+        <div id="noResultsMessage" style="display: none; text-align: center; padding: 20px;">
+            No se encontraron resultados para los filtros aplicados.
+        </div>
+    </div>
+    
+    <div class="pagination-container">
+        <ul id="pagination" class="pagination">
+            <!-- Filled by JavaScript -->
+        </ul>
+    </div>
+    
+    <div id="detailModal" class="detail-modal">
+        <div class="detail-modal-content">
+            <span class="detail-modal-close">&times;</span>
+            <h2>Detalle de venta</h2>
+            <div id="saleDetail" class="detail-grid">
+                <!-- Filled by JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // DOM elements
+        const filterForm = document.getElementById('filterForm');
+        const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+        const salesTable = document.getElementById('salesTable');
+        const salesTableBody = document.getElementById('salesTableBody');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const noResultsMessage = document.getElementById('noResultsMessage');
+        const pagination = document.getElementById('pagination');
+        const detailModal = document.getElementById('detailModal');
+        const detailModalClose = document.querySelector('.detail-modal-close');
+        const saleDetail = document.getElementById('saleDetail');
+        
+        // State variables
+        let currentPage = 1;
+        const itemsPerPage = 10;
+        let totalItems = 0;
+        let salesData = [];
+        let sortField = 'fecha';
+        let sortDirection = 'desc';
+        
+        // Initialize page
+        loadSalesData();
+        
+        // Event listeners
+        filterForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            currentPage = 1;
+            loadSalesData();
+        });
+        
+        clearFiltersBtn.addEventListener('click', function() {
+            filterForm.reset();
+            currentPage = 1;
+            loadSalesData();
+        });
+        
+        // Table header sorting
+        const tableHeaders = salesTable.querySelectorAll('th[data-sort]');
+        tableHeaders.forEach(header => {
+            header.addEventListener('click', function() {
+                const field = this.getAttribute('data-sort');
+                
+                // If clicking the same header, toggle direction
+                if (field === sortField) {
+                    sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortField = field;
+                    sortDirection = 'asc';
+                }
+                
+                // Update sort indicators
+                tableHeaders.forEach(h => h.classList.remove('sorted-asc', 'sorted-desc'));
+                this.classList.add(`sorted-${sortDirection}`);
+                
+                loadSalesData();
+            });
+        });
+        
+        // Modal close button
+        detailModalClose.addEventListener('click', function() {
+            detailModal.style.display = 'none';
+        });
+        
+        // Close modal when clicking outside
+        window.addEventListener('click', function(event) {
+            if (event.target === detailModal) {
+                detailModal.style.display = 'none';
+            }
+        });
+        
+        // Load sales data from API
+        function loadSalesData() {
+            showLoading(true);
+            
+            // Build query parameters
+            const params = new URLSearchParams();
+            
+            // Add filters from form
+            const formData = new FormData(filterForm);
+            for (const [key, value] of formData.entries()) {
+                if (value) {
+                    params.append(key, value);
+                }
+            }
+            
+            // Add pagination and sorting
+            params.append('limit', itemsPerPage);
+            params.append('offset', (currentPage - 1) * itemsPerPage);
+            
+            // Fetch data from API
+            fetch(`/api/ventas?${params.toString()}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        salesData = data.data;
+                        totalItems = data.total;
+                        
+                        // Sort results client-side
+                        salesData.sort((a, b) => {
+                            let valueA = a[sortField];
+                            let valueB = b[sortField];
+                            
+                            // Handle numeric values
+                            if (!isNaN(valueA) && !isNaN(valueB)) {
+                                valueA = Number(valueA);
+                                valueB = Number(valueB);
+                            }
+                            
+                            // Compare values
+                            if (valueA < valueB) {
+                                return sortDirection === 'asc' ? -1 : 1;
+                            }
+                            if (valueA > valueB) {
+                                return sortDirection === 'asc' ? 1 : -1;
+                            }
+                            return 0;
+                        });
+                        
+                        renderTable();
+                        renderPagination();
+                    } else {
+                        showError('Error al cargar los datos de ventas.');
+                    }
+                    showLoading(false);
+                })
+                .catch(error => {
+                    showError('Error en la comunicación con el servidor.');
+                    console.error('Error:', error);
+                    showLoading(false);
+                });
+        }
+        
+        // Render sales table
+        function renderTable() {
+            // Clear table
+            salesTableBody.innerHTML = '';
+            
+            if (salesData.length === 0) {
+                salesTable.style.display = 'none';
+                noResultsMessage.style.display = 'block';
+                return;
+            }
+            
+            salesTable.style.display = 'table';
+            noResultsMessage.style.display = 'none';
+            
+            // Add rows
+            salesData.forEach(sale => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${formatDate(sale.fecha)}</td>
+                    <td>${sale.hora}</td>
+                    <td>${sale.articulo}</td>
+                    <td>${sale.categoria || '-'}</td>
+                    <td>${sale.articulos_vendidos}</td>
+                    <td>${formatCurrency(sale.precio_unitario)}</td>
+                    <td>${formatCurrency(sale.total)}</td>
+                `;
+                
+                row.addEventListener('click', () => showSaleDetail(sale));
+                
+                salesTableBody.appendChild(row);
+            });
+        }
+        
+        // Render pagination controls
+        function renderPagination() {
+            pagination.innerHTML = '';
+            
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+            
+            if (totalPages <= 1) {
+                return;
+            }
+            
+            // Previous button
+            const prevLi = document.createElement('li');
+            prevLi.classList.add(currentPage === 1 ? 'disabled' : '');
+            prevLi.innerHTML = `<a href="#" aria-label="Previous"><span aria-hidden="true">&laquo;</span></a>`;
+            if (currentPage > 1) {
+                prevLi.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    currentPage--;
+                    loadSalesData();
+                });
+            }
+            pagination.appendChild(prevLi);
+            
+            // Page numbers
+            let startPage = Math.max(1, currentPage - 2);
+            let endPage = Math.min(totalPages, startPage + 4);
+            
+            if (endPage - startPage < 4) {
+                startPage = Math.max(1, endPage - 4);
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                const li = document.createElement('li');
+                li.classList.add(i === currentPage ? 'active' : '');
+                li.innerHTML = `<a href="#">${i}</a>`;
+                
+                li.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (i !== currentPage) {
+                        currentPage = i;
+                        loadSalesData();
+                    }
+                });
+                
+                pagination.appendChild(li);
+            }
+            
+            // Next button
+            const nextLi = document.createElement('li');
+            nextLi.classList.add(currentPage === totalPages ? 'disabled' : '');
+            nextLi.innerHTML = `<a href="#" aria-label="Next"><span aria-hidden="true">&raquo;</span></a>`;
+            if (currentPage < totalPages) {
+                nextLi.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    currentPage++;
+                    loadSalesData();
+                });
+            }
+            pagination.appendChild(nextLi);
+        }
+        
+        // Show sale detail in modal
+        function showSaleDetail(sale) {
+            saleDetail.innerHTML = `
+                <div class="detail-item">
+                    <div class="detail-label">Fecha:</div>
+                    <div>${formatDate(sale.fecha)}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Hora:</div>
+                    <div>${sale.hora}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Ticket:</div>
+                    <div>${sale.ticket || '-'}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Empleado:</div>
+                    <div>${sale.empleado || '-'}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Mesa:</div>
+                    <div>${sale.mesa || '-'}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Comensales:</div>
+                    <div>${sale.comensales || '-'}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Artículo:</div>
+                    <div>${sale.articulo}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Categoría:</div>
+                    <div>${sale.categoria || '-'}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Subcategoría:</div>
+                    <div>${sale.subcategoria || '-'}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Precio unitario:</div>
+                    <div>${formatCurrency(sale.precio_unitario)}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Cantidad vendida:</div>
+                    <div>${sale.articulos_vendidos}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">IVA:</div>
+                    <div>${formatCurrency(sale.iva)}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Propina:</div>
+                    <div>${formatCurrency(sale.propina)}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Total:</div>
+                    <div>${formatCurrency(sale.total)}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Costo estimado:</div>
+                    <div>${formatCurrency(sale.costo_estimado)}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Ganancia estimada:</div>
+                    <div>${formatCurrency(sale.ganancia_estimada)}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Porcentaje de ganancia:</div>
+                    <div>${sale.porcentaje_ganancia ? `${sale.porcentaje_ganancia}%` : '-'}</div>
+                </div>
+            `;
+            
+            detailModal.style.display = 'block';
+        }
+        
+        // Show/hide loading indicator
+        function showLoading(show) {
+            loadingIndicator.style.display = show ? 'block' : 'none';
+            salesTable.style.display = show ? 'none' : (salesData.length > 0 ? 'table' : 'none');
+        }
+        
+        // Show error message
+        function showError(message) {
+            noResultsMessage.textContent = message;
+            noResultsMessage.style.display = 'block';
+            salesTable.style.display = 'none';
+        }
+        
+        // Format date
+        function formatDate(dateString) {
+            const parts = dateString.split('-');
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+        
+        // Format currency
+        function formatCurrency(value) {
+            if (value === null || value === undefined) {
+                return '-';
+            }
+            return `$${parseFloat(value).toFixed(2)}`;
+        }
+    });
+</script>
+{% endblock %} 

@@ -52,7 +52,8 @@ async function handleIngredientForm(event) {
         unidad_medida: formData.get('unidad_medida'),
         precio_compra: parseFloat(formData.get('precio_compra')) || 0,
         cantidad_actual: parseFloat(formData.get('cantidad_actual')) || 0,
-        stock_minimo: parseFloat(formData.get('stock_minimo')) || 0
+        stock_minimo: parseFloat(formData.get('stock_minimo')) || 0,
+        categoria: formData.get('categoria')
     };
     
     try {

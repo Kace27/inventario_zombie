@@ -1,0 +1,525 @@
+{% extends "layout.html" %}
+
+{% block title %}Recepción de Ingredientes - Inventario Zombie{% endblock %}
+
+{% block head %}
+<style>
+    /* Mobile-first responsive design */
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+    
+    .container {
+        max-width: 100%;
+        padding: 0 15px;
+    }
+    
+    /* Search bar */
+    .search-container {
+        position: sticky;
+        top: 0;
+        background-color: #fff;
+        padding: 10px 0;
+        z-index: 100;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 10px;
+    }
+    
+    .search-input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 16px;
+        outline: none;
+    }
+    
+    /* Ingredient categories */
+    .category-header {
+        background-color: #f8f9fa;
+        padding: 12px;
+        margin-top: 8px;
+        border-radius: 8px;
+        font-weight: bold;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+    }
+    
+    .category-toggle {
+        transition: transform 0.3s;
+    }
+    
+    .category-toggle.collapsed {
+        transform: rotate(-90deg);
+    }
+    
+    .category-items {
+        max-height: 2000px;
+        overflow: hidden;
+        transition: max-height 0.5s ease-in-out;
+    }
+    
+    .category-items.collapsed {
+        max-height: 0;
+    }
+    
+    /* Ingredient item styling */
+    .ingredient-item {
+        background-color: #fff;
+        border-radius: 20px;
+        margin: 8px 0;
+        padding: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .ingredient-name {
+        font-weight: 500;
+        flex: 1;
+        margin-right: 10px;
+    }
+    
+    .ingredient-unit {
+        color: #666;
+        font-size: 0.85em;
+    }
+    
+    /* Quantity controls - improved alignment */
+    .quantity-control {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #f1f1f1;
+        border-radius: 30px;
+        padding: 4px;
+        width: 120px;
+        height: 38px;
+    }
+    
+    .quantity-btn {
+        width: 30px;
+        height: 30px;
+        min-width: 30px;
+        border-radius: 50%;
+        border: none;
+        background-color: #fff;
+        font-size: 16px;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: #333;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        padding: 0;
+        margin: 0;
+    }
+    
+    .quantity-btn.minus {
+        margin-right: 4px;
+    }
+    
+    .quantity-btn.plus {
+        margin-left: 4px;
+    }
+    
+    input.quantity-value {
+        width: 40px;
+        text-align: center;
+        border: none;
+        background: transparent;
+        font-size: 16px;
+        font-weight: bold;
+        padding: 0;
+        margin: 0;
+        -moz-appearance: textfield; /* Firefox */
+    }
+    
+    /* Hide spinners for number inputs */
+    input.quantity-value::-webkit-outer-spin-button,
+    input.quantity-value::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    
+    /* Form and submit button */
+    .action-button {
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 30px;
+        padding: 15px 20px;
+        width: 100%;
+        font-size: 16px;
+        font-weight: bold;
+        margin-top: 20px;
+        cursor: pointer;
+    }
+    
+    .notes-field {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        margin-top: 15px;
+        font-size: 16px;
+    }
+    
+    /* Status message */
+    .status-message {
+        padding: 15px;
+        margin: 15px 0;
+        border-radius: 8px;
+        display: none;
+    }
+    
+    .status-success {
+        background-color: rgba(76, 175, 80, 0.1);
+        border: 1px solid #4CAF50;
+        color: #2E7D32;
+    }
+    
+    .status-error {
+        background-color: rgba(244, 67, 54, 0.1);
+        border: 1px solid #F44336;
+        color: #C62828;
+    }
+    
+    /* Media queries for larger screens */
+    @media (min-width: 768px) {
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+        }
+    }
+    
+    @media (min-width: 992px) {
+        .container {
+            max-width: 960px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Recepción de Ingredientes</h1>
+    
+    <div id="statusMessage" class="status-message"></div>
+    
+    <div class="search-container">
+        <input type="text" id="ingredientSearch" class="search-input" placeholder="Buscar ingrediente...">
+    </div>
+    
+    <form id="receptionForm">
+        <div id="ingredientContainer">
+            <!-- Categories and ingredients will be populated here by JavaScript -->
+        </div>
+        
+        <textarea id="notas" name="notas" class="notes-field" rows="2" placeholder="Notas (opcional)"></textarea>
+        
+        <button type="submit" class="action-button">Registrar recepción</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // DOM elements
+        const receptionForm = document.getElementById('receptionForm');
+        const statusMessage = document.getElementById('statusMessage');
+        const ingredientSearch = document.getElementById('ingredientSearch');
+        const ingredientContainer = document.getElementById('ingredientContainer');
+        
+        // State variables
+        let ingredientsList = [];
+        let categorizedIngredients = {};
+        let selectedIngredientId = null;
+        let selectedQuantity = 0;
+        
+        // Initialize - load ingredients on page load
+        loadIngredients();
+        
+        // Event listeners
+        receptionForm.addEventListener('submit', handleFormSubmit);
+        
+        ingredientSearch.addEventListener('input', function() {
+            const searchTerm = this.value.trim().toLowerCase();
+            filterIngredients(searchTerm);
+        });
+        
+        // Function to load ingredients from API
+        function loadIngredients() {
+            showStatus('info', 'Cargando ingredientes...');
+            
+            fetch('/api/ingredientes')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Error HTTP: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (Array.isArray(data)) {
+                        ingredientsList = data;
+                        categorizeIngredients();
+                        renderIngredients();
+                        showStatus('success', `${ingredientsList.length} ingredientes cargados`);
+                    } else {
+                        console.error('Formato de datos inesperado:', data);
+                        showStatus('error', 'Formato de respuesta inesperado');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error al cargar ingredientes:', error);
+                    showStatus('error', 'Error: ' + error.message);
+                });
+        }
+        
+        // Function to categorize ingredients by their categories
+        function categorizeIngredients() {
+            categorizedIngredients = {};
+            
+            // First group by categoria
+            ingredientsList.forEach(ingredient => {
+                const category = ingredient.categoria || 'Sin categoría';
+                
+                if (!categorizedIngredients[category]) {
+                    categorizedIngredients[category] = [];
+                }
+                
+                categorizedIngredients[category].push(ingredient);
+            });
+            
+            // Sort ingredients within each category alphabetically
+            for (const category in categorizedIngredients) {
+                categorizedIngredients[category].sort((a, b) => 
+                    a.nombre.localeCompare(b.nombre)
+                );
+            }
+        }
+        
+        // Function to render all ingredients grouped by category
+        function renderIngredients() {
+            ingredientContainer.innerHTML = '';
+            
+            // Get categories and sort them alphabetically
+            const categories = Object.keys(categorizedIngredients).sort();
+            
+            categories.forEach(category => {
+                const categoryId = `category-${category.replace(/\s+/g, '-').toLowerCase()}`;
+                const items = categorizedIngredients[category];
+                
+                const categoryElement = document.createElement('div');
+                categoryElement.className = 'category';
+                categoryElement.innerHTML = `
+                    <div class="category-header" data-target="${categoryId}">
+                        <span>${category} (${items.length})</span>
+                        <span class="category-toggle">▼</span>
+                    </div>
+                    <div id="${categoryId}" class="category-items">
+                        <!-- Ingredients will be added here -->
+                    </div>
+                `;
+                
+                ingredientContainer.appendChild(categoryElement);
+                
+                const categoryItems = document.getElementById(categoryId);
+                
+                // Render ingredients for this category
+                items.forEach(ingredient => {
+                    renderIngredientItem(categoryItems, ingredient);
+                });
+                
+                // Add click event for category header (collapse/expand)
+                const header = categoryElement.querySelector('.category-header');
+                header.addEventListener('click', function() {
+                    const targetId = this.getAttribute('data-target');
+                    const targetElement = document.getElementById(targetId);
+                    const toggleIcon = this.querySelector('.category-toggle');
+                    
+                    targetElement.classList.toggle('collapsed');
+                    toggleIcon.classList.toggle('collapsed');
+                });
+            });
+        }
+        
+        // Function to render a single ingredient item
+        function renderIngredientItem(container, ingredient) {
+            const itemElement = document.createElement('div');
+            itemElement.className = 'ingredient-item';
+            itemElement.setAttribute('data-id', ingredient.id);
+            itemElement.innerHTML = `
+                <div class="ingredient-name">
+                    ${ingredient.nombre} <span class="ingredient-unit">(${ingredient.unidad_medida})</span>
+                </div>
+                <div class="quantity-control">
+                    <button type="button" class="quantity-btn minus" data-id="${ingredient.id}">-</button>
+                    <input type="number" class="quantity-value" value="0" data-id="${ingredient.id}" min="0" step="0.01">
+                    <button type="button" class="quantity-btn plus" data-id="${ingredient.id}">+</button>
+                </div>
+            `;
+            
+            container.appendChild(itemElement);
+            
+            // Add event listeners for quantity buttons
+            const minusBtn = itemElement.querySelector('.minus');
+            const plusBtn = itemElement.querySelector('.plus');
+            const quantityInput = itemElement.querySelector('.quantity-value');
+            
+            minusBtn.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                const input = document.querySelector(`.quantity-value[data-id="${id}"]`);
+                const currentValue = parseFloat(input.value) || 0;
+                
+                if (currentValue > 0) {
+                    input.value = (currentValue - 1).toFixed(2);
+                    updateSelectedIngredient(id, parseFloat(input.value));
+                }
+            });
+            
+            plusBtn.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                const input = document.querySelector(`.quantity-value[data-id="${id}"]`);
+                const currentValue = parseFloat(input.value) || 0;
+                
+                input.value = (currentValue + 1).toFixed(2);
+                updateSelectedIngredient(id, parseFloat(input.value));
+            });
+            
+            quantityInput.addEventListener('input', function() {
+                const id = this.getAttribute('data-id');
+                updateSelectedIngredient(id, parseFloat(this.value) || 0);
+            });
+        }
+        
+        // Function to update the selected ingredient
+        function updateSelectedIngredient(id, quantity) {
+            selectedIngredientId = id;
+            selectedQuantity = quantity;
+        }
+        
+        // Function to filter ingredients based on search term
+        function filterIngredients(searchTerm) {
+            if (!searchTerm) {
+                // Show all ingredients
+                document.querySelectorAll('.ingredient-item').forEach(item => {
+                    item.style.display = 'flex';
+                });
+                
+                // Show all categories
+                document.querySelectorAll('.category').forEach(category => {
+                    category.style.display = 'block';
+                    
+                    // Count visible items in this category
+                    const categoryItems = category.querySelectorAll('.ingredient-item');
+                    const categoryHeader = category.querySelector('.category-header span:first-child');
+                    const categoryId = category.querySelector('.category-header').getAttribute('data-target');
+                    const categoryName = categoryId.replace('category-', '').replace(/-/g, ' ');
+                    
+                    categoryHeader.textContent = `${categoryName} (${categoryItems.length})`;
+                });
+                
+                return;
+            }
+            
+            // Filter and show only matching ingredients
+            document.querySelectorAll('.ingredient-item').forEach(item => {
+                const ingredientName = item.querySelector('.ingredient-name').textContent.toLowerCase();
+                
+                if (ingredientName.includes(searchTerm)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+            
+            // Show/hide categories based on whether they have visible items
+            document.querySelectorAll('.category').forEach(category => {
+                const visibleItems = Array.from(category.querySelectorAll('.ingredient-item'))
+                    .filter(item => item.style.display !== 'none');
+                
+                if (visibleItems.length > 0) {
+                    category.style.display = 'block';
+                    
+                    // Update category header with count
+                    const categoryHeader = category.querySelector('.category-header span:first-child');
+                    const categoryId = category.querySelector('.category-header').getAttribute('data-target');
+                    let categoryName = categoryId.replace('category-', '').replace(/-/g, ' ');
+                    categoryName = categoryName.charAt(0).toUpperCase() + categoryName.slice(1);
+                    
+                    categoryHeader.textContent = `${categoryName} (${visibleItems.length})`;
+                } else {
+                    category.style.display = 'none';
+                }
+            });
+        }
+        
+        // Function to handle form submission
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            if (!selectedIngredientId) {
+                showStatus('error', 'Selecciona un ingrediente y ajusta la cantidad');
+                return;
+            }
+            
+            if (selectedQuantity <= 0) {
+                showStatus('error', 'La cantidad debe ser mayor que cero');
+                return;
+            }
+            
+            const formData = {
+                ingrediente_id: parseInt(selectedIngredientId),
+                cantidad_recibida: selectedQuantity,
+                notas: document.getElementById('notas').value
+            };
+            
+            // Submit to API
+            fetch('/api/recepciones', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showStatus('success', data.message);
+                    
+                    // Reset form
+                    document.getElementById('notas').value = '';
+                    document.querySelector(`.quantity-value[data-id="${selectedIngredientId}"]`).value = "0";
+                    selectedIngredientId = null;
+                    selectedQuantity = 0;
+                } else {
+                    showStatus('error', data.error || 'Error al registrar la recepción');
+                }
+            })
+            .catch(error => {
+                console.error('Error al registrar recepción:', error);
+                showStatus('error', 'Error al comunicarse con el servidor');
+            });
+        }
+        
+        // Function to show status message
+        function showStatus(type, message) {
+            statusMessage.textContent = message;
+            statusMessage.className = 'status-message';
+            statusMessage.classList.add(`status-${type}`);
+            statusMessage.style.display = 'block';
+            
+            // Hide after 5 seconds
+            setTimeout(() => {
+                statusMessage.style.display = 'none';
+            }, 5000);
+        }
+    });
+</script>
+{% endblock %} 

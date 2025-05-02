@@ -41,6 +41,22 @@
     </div>
     
     <div class="form-group">
+        <label for="categoria">Categoría <span class="required">*</span></label>
+        <select id="categoria" name="categoria" required>
+            <option value="" disabled {% if not ingrediente or not ingrediente.get('categoria') %}selected{% endif %}>Seleccione una categoría</option>
+            <option value="Proteínas" {% if ingrediente and ingrediente.get('categoria') == 'Proteínas' %}selected{% endif %}>Proteínas</option>
+            <option value="Vegetales" {% if ingrediente and ingrediente.get('categoria') == 'Vegetales' %}selected{% endif %}>Vegetales</option>
+            <option value="Frutas" {% if ingrediente and ingrediente.get('categoria') == 'Frutas' %}selected{% endif %}>Frutas</option>
+            <option value="Lácteos" {% if ingrediente and ingrediente.get('categoria') == 'Lácteos' %}selected{% endif %}>Lácteos</option>
+            <option value="Cereales" {% if ingrediente and ingrediente.get('categoria') == 'Cereales' %}selected{% endif %}>Cereales</option>
+            <option value="Condimentos" {% if ingrediente and ingrediente.get('categoria') == 'Condimentos' %}selected{% endif %}>Condimentos</option>
+            <option value="Bebidas" {% if ingrediente and ingrediente.get('categoria') == 'Bebidas' %}selected{% endif %}>Bebidas</option>
+            <option value="Enlatados" {% if ingrediente and ingrediente.get('categoria') == 'Enlatados' %}selected{% endif %}>Enlatados</option>
+            <option value="Otros" {% if ingrediente and ingrediente.get('categoria') == 'Otros' %}selected{% endif %}>Otros</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
         <label for="precio_compra">Precio de Compra <span class="required">*</span></label>
         <div class="input-addon">
             <span class="addon-prefix">$</span>

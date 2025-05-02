@@ -1,0 +1,412 @@
+{% extends "layout.html" %}
+
+{% block title %}Importar Ventas - Inventario Zombie{% endblock %}
+
+{% block head %}
+<style>
+    .import-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .file-upload-area {
+        border: 2px dashed #ccc;
+        border-radius: 8px;
+        padding: 30px;
+        text-align: center;
+        margin-bottom: 20px;
+        transition: all 0.3s;
+    }
+    .file-upload-area:hover {
+        border-color: #888;
+    }
+    .file-upload-area.active {
+        border-color: #4CAF50;
+        background-color: rgba(76, 175, 80, 0.1);
+    }
+    .mapping-container {
+        display: none;
+        margin-top: 20px;
+    }
+    .mapping-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    .mapping-row label {
+        min-width: 150px;
+    }
+    .mapping-row select {
+        flex-grow: 1;
+    }
+    .status-container {
+        margin-top: 20px;
+        padding: 15px;
+        border-radius: 4px;
+        display: none;
+    }
+    .status-success {
+        background-color: rgba(76, 175, 80, 0.1);
+        border: 1px solid #4CAF50;
+    }
+    .status-error {
+        background-color: rgba(244, 67, 54, 0.1);
+        border: 1px solid #F44336;
+    }
+    .preview-container {
+        margin-top: 20px;
+        overflow-x: auto;
+    }
+    .preview-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .preview-table th, .preview-table td {
+        padding: 8px;
+        border: 1px solid #ddd;
+    }
+    .preview-table th {
+        background-color: #f2f2f2;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="import-container">
+    <h1>Importar Datos de Ventas</h1>
+    
+    <div class="file-upload-area" id="dropZone">
+        <p><i class="fas fa-file-csv fa-3x"></i></p>
+        <p>Arrastra y suelta un archivo CSV o haz clic para seleccionarlo</p>
+        <input type="file" id="fileInput" accept=".csv" style="display: none;">
+        <button id="browseButton" class="btn">Seleccionar archivo</button>
+    </div>
+    
+    <div id="fileInfo" style="display: none;">
+        <p>Archivo seleccionado: <span id="fileName"></span></p>
+        <button id="changeFileButton" class="btn btn-secondary">Cambiar archivo</button>
+    </div>
+    
+    <div id="previewContainer" class="preview-container" style="display: none;">
+        <h2>Vista previa de los datos</h2>
+        <div id="previewTable"></div>
+    </div>
+    
+    <div id="mappingContainer" class="mapping-container">
+        <h2>Mapeo de columnas</h2>
+        <p>Asocia cada columna del CSV con el campo correspondiente en la base de datos:</p>
+        
+        <div id="columnMapping"></div>
+        
+        <div class="form-actions">
+            <button id="importButton" class="btn btn-primary">Importar datos</button>
+            <button id="cancelButton" class="btn btn-secondary">Cancelar</button>
+        </div>
+    </div>
+    
+    <div id="statusContainer" class="status-container">
+        <h3 id="statusTitle"></h3>
+        <p id="statusMessage"></p>
+        <div id="statusDetails"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const browseButton = document.getElementById('browseButton');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const changeFileButton = document.getElementById('changeFileButton');
+        const mappingContainer = document.getElementById('mappingContainer');
+        const columnMapping = document.getElementById('columnMapping');
+        const importButton = document.getElementById('importButton');
+        const cancelButton = document.getElementById('cancelButton');
+        const statusContainer = document.getElementById('statusContainer');
+        const statusTitle = document.getElementById('statusTitle');
+        const statusMessage = document.getElementById('statusMessage');
+        const statusDetails = document.getElementById('statusDetails');
+        const previewContainer = document.getElementById('previewContainer');
+        const previewTable = document.getElementById('previewTable');
+        
+        let csvFile = null;
+        let csvHeaders = [];
+        let csvData = [];
+        
+        // Database fields for mapping
+        const dbFields = [
+            { field: 'fecha', label: 'Fecha' },
+            { field: 'hora', label: 'Hora' },
+            { field: 'ticket', label: 'Ticket' },
+            { field: 'empleado', label: 'Empleado' },
+            { field: 'mesa', label: 'Mesa' },
+            { field: 'comensales', label: 'Comensales' },
+            { field: 'articulo', label: 'Artículo' },
+            { field: 'categoria', label: 'Categoría' },
+            { field: 'subcategoria', label: 'Subcategoría' },
+            { field: 'precio_unitario', label: 'Precio Unitario' },
+            { field: 'articulos_vendidos', label: 'Cantidad Vendida' },
+            { field: 'iva', label: 'IVA' },
+            { field: 'propina', label: 'Propina' },
+            { field: 'total', label: 'Total' }
+        ];
+        
+        // Handle click on browse button
+        browseButton.addEventListener('click', function() {
+            fileInput.click();
+        });
+        
+        // Handle file selection
+        fileInput.addEventListener('change', handleFileSelect);
+        
+        // Handle drag and drop
+        dropZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.add('active');
+        });
+        
+        dropZone.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.remove('active');
+        });
+        
+        dropZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.remove('active');
+            
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            fileInput.files = files;
+            handleFileSelect(e);
+        });
+        
+        // Handle change file button
+        changeFileButton.addEventListener('click', function() {
+            resetUI();
+        });
+        
+        // Handle import button
+        importButton.addEventListener('click', importData);
+        
+        // Handle cancel button
+        cancelButton.addEventListener('click', resetUI);
+        
+        // Function to handle file selection
+        function handleFileSelect(e) {
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                return;
+            }
+            
+            if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+                showStatus('error', 'Error de archivo', 'Por favor, selecciona un archivo CSV válido.');
+                return;
+            }
+            
+            csvFile = file;
+            fileName.textContent = file.name;
+            
+            dropZone.style.display = 'none';
+            fileInfo.style.display = 'block';
+            
+            parseCSV(file);
+        }
+        
+        // Function to parse CSV file
+        function parseCSV(file) {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const contents = e.target.result;
+                const lines = contents.split('\n');
+                
+                // Extract headers
+                const headerLine = lines[0];
+                csvHeaders = headerLine.split(',').map(header => header.trim());
+                
+                // Extract data for preview
+                csvData = [];
+                for (let i = 1; i < Math.min(6, lines.length); i++) {
+                    if (lines[i].trim() !== '') {
+                        const row = lines[i].split(',').map(cell => cell.trim());
+                        csvData.push(row);
+                    }
+                }
+                
+                // Show preview
+                showPreview();
+                
+                // Generate mapping form
+                generateMappingForm();
+                
+                mappingContainer.style.display = 'block';
+            };
+            
+            reader.readAsText(file);
+        }
+        
+        // Function to show preview of CSV data
+        function showPreview() {
+            let tableHTML = '<table class="preview-table"><thead><tr>';
+            
+            // Generate table headers
+            csvHeaders.forEach(header => {
+                tableHTML += `<th>${header}</th>`;
+            });
+            
+            tableHTML += '</tr></thead><tbody>';
+            
+            // Generate table rows
+            csvData.forEach(row => {
+                tableHTML += '<tr>';
+                row.forEach(cell => {
+                    tableHTML += `<td>${cell}</td>`;
+                });
+                tableHTML += '</tr>';
+            });
+            
+            tableHTML += '</tbody></table>';
+            
+            previewTable.innerHTML = tableHTML;
+            previewContainer.style.display = 'block';
+        }
+        
+        // Function to generate mapping form
+        function generateMappingForm() {
+            let mappingHTML = '';
+            
+            dbFields.forEach(field => {
+                const fieldId = `mapping_${field.field}`;
+                
+                mappingHTML += `
+                <div class="mapping-row">
+                    <label for="${fieldId}">${field.label}:</label>
+                    <select id="${fieldId}" name="${field.field}" class="mapping-select">
+                        <option value="">-- No mapear --</option>
+                `;
+                
+                // Add options for each CSV header
+                csvHeaders.forEach((header, index) => {
+                    // Try to automatically match fields based on similar names
+                    const selected = header.toLowerCase().includes(field.field.toLowerCase()) ? 'selected' : '';
+                    mappingHTML += `<option value="${index}" ${selected}>${header}</option>`;
+                });
+                
+                mappingHTML += `
+                    </select>
+                </div>
+                `;
+            });
+            
+            columnMapping.innerHTML = mappingHTML;
+        }
+        
+        // Function to import data
+        function importData() {
+            // Show loading status
+            showStatus('info', 'Importando datos', 'El proceso de importación está en curso...');
+            
+            // Collect mapping data
+            const mapping = {};
+            
+            dbFields.forEach(field => {
+                const select = document.getElementById(`mapping_${field.field}`);
+                const selectedValue = select.value;
+                
+                if (selectedValue !== '') {
+                    mapping[field.field] = parseInt(selectedValue);
+                }
+            });
+            
+            // Required fields
+            const requiredFields = ['articulo', 'articulos_vendidos'];
+            
+            // Check if required fields are mapped
+            let missingFields = [];
+            requiredFields.forEach(field => {
+                if (!(field in mapping)) {
+                    const fieldLabel = dbFields.find(f => f.field === field).label;
+                    missingFields.push(fieldLabel);
+                }
+            });
+            
+            if (missingFields.length > 0) {
+                showStatus('error', 'Error de mapeo', 
+                    `Los siguientes campos son obligatorios: ${missingFields.join(', ')}`);
+                return;
+            }
+            
+            // Prepare form data
+            const formData = new FormData();
+            formData.append('file', csvFile);
+            formData.append('column_mapping', JSON.stringify(mapping));
+            
+            // Send request to API
+            fetch('/api/ventas/importar', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showStatus('success', 'Importación exitosa', data.message, data.errors);
+                } else {
+                    showStatus('error', 'Error en la importación', data.error || 'Ha ocurrido un error al importar los datos.', data.errors);
+                }
+            })
+            .catch(error => {
+                showStatus('error', 'Error en la importación', 'Ha ocurrido un error al comunicarse con el servidor.');
+                console.error('Error:', error);
+            });
+        }
+        
+        // Function to show status
+        function showStatus(type, title, message, details = null) {
+            statusTitle.textContent = title;
+            statusMessage.textContent = message;
+            
+            statusContainer.className = 'status-container';
+            statusContainer.classList.add(`status-${type}`);
+            
+            // Clear previous details
+            statusDetails.innerHTML = '';
+            
+            // Add details if available
+            if (details && Array.isArray(details) && details.length > 0) {
+                const detailsList = document.createElement('ul');
+                
+                details.forEach(detail => {
+                    const item = document.createElement('li');
+                    item.textContent = `${detail.articulo}: ${detail.error}`;
+                    detailsList.appendChild(item);
+                });
+                
+                statusDetails.appendChild(detailsList);
+            }
+            
+            statusContainer.style.display = 'block';
+        }
+        
+        // Function to reset UI
+        function resetUI() {
+            fileInput.value = '';
+            csvFile = null;
+            csvHeaders = [];
+            csvData = [];
+            
+            dropZone.style.display = 'block';
+            fileInfo.style.display = 'none';
+            mappingContainer.style.display = 'none';
+            statusContainer.style.display = 'none';
+            previewContainer.style.display = 'none';
+        }
+    });
+</script>
+{% endblock %} 
