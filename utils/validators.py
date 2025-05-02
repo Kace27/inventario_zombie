@@ -15,7 +15,7 @@ def validate_request_json(required_fields=None):
     """
     # Check if request has JSON data
     if not request.is_json:
-        return False, None, jsonify({'error': 'Content-Type must be application/json'}), 415
+        return False, None, (jsonify({'error': 'Content-Type must be application/json'}), 415)
     
     # Get the request data
     data = request.get_json()
@@ -24,10 +24,10 @@ def validate_request_json(required_fields=None):
     if required_fields:
         missing_fields = [field for field in required_fields if field not in data or data[field] is None]
         if missing_fields:
-            return False, None, jsonify({
+            return False, None, (jsonify({
                 'error': 'Missing required fields',
                 'missing_fields': missing_fields
-            }), 400
+            }), 400)
     
     return True, data, None
 

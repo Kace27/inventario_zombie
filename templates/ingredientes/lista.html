@@ -1,0 +1,135 @@
+{% extends "layout.html" %}
+
+{% block title %}Listado de Ingredientes - Inventario Zombie{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Ingredientes</h1>
+    <a href="{{ url_for('ingredientes_web.nuevo') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Nuevo Ingrediente
+    </a>
+</div>
+
+<div class="search-box">
+    <input type="text" id="search-input" placeholder="Buscar ingrediente...">
+    <button id="search-button" class="btn">
+        <i class="fas fa-search"></i>
+    </button>
+</div>
+
+<!-- Mobile Card View (default for small screens) -->
+<div class="item-list" id="ingredient-cards">
+    {% for ingrediente in ingredientes %}
+    <div class="item-card">
+        <h3>{{ ingrediente.nombre }}</h3>
+        <div class="item-detail">
+            <span>Cantidad:</span>
+            <span class="{% if ingrediente.cantidad_actual <= ingrediente.stock_minimo %}low-stock{% endif %}">
+                {{ ingrediente.cantidad_actual }} {{ ingrediente.unidad_medida }}
+            </span>
+        </div>
+        <div class="item-detail">
+            <span>Stock Mínimo:</span>
+            <span>{{ ingrediente.stock_minimo }} {{ ingrediente.unidad_medida }}</span>
+        </div>
+        <div class="item-detail">
+            <span>Precio Compra:</span>
+            <span>${{ "%.2f"|format(ingrediente.precio_compra) }}</span>
+        </div>
+        <div class="item-actions">
+            <a href="{{ url_for('ingredientes_web.editar', id=ingrediente.id) }}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-edit"></i>
+            </a>
+            <button class="btn btn-danger btn-sm delete-ingredient" 
+                   data-id="{{ ingrediente.id }}" 
+                   data-name="{{ ingrediente.nombre }}">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-box-open fa-3x"></i>
+        <p>No hay ingredientes registrados</p>
+        <a href="{{ url_for('ingredientes_web.nuevo') }}" class="btn btn-primary">
+            Agregar Ingrediente
+        </a>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Table View (for larger screens) -->
+<div class="table-responsive d-none d-md-block">
+    <table>
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Cantidad Actual</th>
+                <th>Stock Mínimo</th>
+                <th>Unidad</th>
+                <th>Precio</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ingrediente in ingredientes %}
+            <tr>
+                <td>{{ ingrediente.nombre }}</td>
+                <td class="{% if ingrediente.cantidad_actual <= ingrediente.stock_minimo %}low-stock{% endif %}">
+                    {{ ingrediente.cantidad_actual }}
+                </td>
+                <td>{{ ingrediente.stock_minimo }}</td>
+                <td>{{ ingrediente.unidad_medida }}</td>
+                <td>${{ "%.2f"|format(ingrediente.precio_compra) }}</td>
+                <td>
+                    <a href="{{ url_for('ingredientes_web.editar', id=ingrediente.id) }}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    <button class="btn btn-danger btn-sm delete-ingredient" 
+                           data-id="{{ ingrediente.id }}" 
+                           data-name="{{ ingrediente.nombre }}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" class="text-center">No hay ingredientes registrados</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/api.js') }}"></script>
+<script src="{{ url_for('static', filename='js/forms.js') }}"></script>
+<script>
+    // Search functionality
+    document.getElementById('search-input').addEventListener('keyup', function() {
+        const searchTerm = this.value.toLowerCase();
+        const items = document.querySelectorAll('.item-card, table tbody tr:not(.empty-row)');
+        
+        items.forEach(item => {
+            if (item.classList.contains('item-card')) {
+                // For card view
+                const name = item.querySelector('h3').textContent.toLowerCase();
+                if (name.includes(searchTerm)) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            } else {
+                // For table view
+                const name = item.querySelector('td:first-child').textContent.toLowerCase();
+                if (name.includes(searchTerm)) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            }
+        });
+    });
+</script>
+{% endblock %} 

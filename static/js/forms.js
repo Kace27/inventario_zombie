@@ -1,124 +1,289 @@
 /**
- * Form handling utilities for Inventario Zombie
- * This file contains functions for form validation and submission
+ * Inventario Zombie Forms
+ * JavaScript module for handling forms
  */
 
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize all forms with form handlers
+    initForms();
+});
+
 /**
- * Validate form data
- * @param {HTMLFormElement} form - The form element to validate
- * @returns {boolean} - Whether the form is valid
+ * Initialize form handlers
  */
-function validateForm(form) {
-    let isValid = true;
-    const requiredFields = form.querySelectorAll('[required]');
+function initForms() {
+    // Handle ingredient form submissions
+    const ingredientForm = document.getElementById('ingredient-form');
+    if (ingredientForm) {
+        ingredientForm.addEventListener('submit', handleIngredientForm);
+    }
     
-    // Reset previous validation messages
-    form.querySelectorAll('.validation-message').forEach(el => el.remove());
+    // Handle product form submissions
+    const productForm = document.getElementById('product-form');
+    if (productForm) {
+        productForm.addEventListener('submit', handleProductForm);
+    }
     
-    // Check required fields
-    requiredFields.forEach(field => {
-        if (!field.value.trim()) {
-            isValid = false;
-            showValidationError(field, 'Este campo es obligatorio');
-        }
-    });
+    // Handle product composition form submissions
+    const compositionForm = document.getElementById('composition-form');
+    if (compositionForm) {
+        compositionForm.addEventListener('submit', handleCompositionForm);
+    }
     
-    // Add additional validation rules as needed
-    const numericFields = form.querySelectorAll('[data-type="numeric"]');
-    numericFields.forEach(field => {
-        if (field.value && isNaN(parseFloat(field.value))) {
-            isValid = false;
-            showValidationError(field, 'Este campo debe ser numérico');
-        }
-    });
-    
-    return isValid;
+    // Handle delete confirmations
+    initDeleteConfirmations();
 }
 
 /**
- * Show validation error message
- * @param {HTMLElement} field - The field with the error
- * @param {string} message - The error message
+ * Handle ingredient form submission
+ * @param {Event} event - Form submit event
  */
-function showValidationError(field, message) {
-    const errorElement = document.createElement('div');
-    errorElement.className = 'validation-message error';
-    errorElement.textContent = message;
-    field.parentNode.appendChild(errorElement);
-    field.classList.add('error');
-}
-
-/**
- * Handle form submission
- * @param {HTMLFormElement} form - The form element
- * @param {Function} submitCallback - Callback function for form submission
- * @param {Function} successCallback - Callback function for successful submission
- * @param {Function} errorCallback - Callback function for submission error
- */
-function handleFormSubmit(form, submitCallback, successCallback, errorCallback) {
-    form.addEventListener('submit', async function(event) {
-        event.preventDefault();
-        
-        if (!validateForm(form)) {
-            return;
-        }
-        
-        // Show loading state
-        const submitButton = form.querySelector('[type="submit"]');
-        const originalButtonText = submitButton.textContent;
-        submitButton.disabled = true;
-        submitButton.textContent = 'Procesando...';
-        
-        try {
-            // Get form data as object
-            const formData = new FormData(form);
-            const formDataObj = {};
-            formData.forEach((value, key) => {
-                formDataObj[key] = value;
-            });
-            
-            // Call the submit callback with the form data
-            const result = await submitCallback(formDataObj);
-            
-            // Call success callback
-            if (successCallback) {
-                successCallback(result);
-            }
-            
-            // Reset form if needed
-            form.reset();
-            
-        } catch (error) {
-            console.error('Form submission error:', error);
-            
-            // Call error callback
-            if (errorCallback) {
-                errorCallback(error);
-            } else {
-                // Default error handling
-                alert('Error al procesar el formulario: ' + error.message);
-            }
-        } finally {
-            // Reset button state
-            submitButton.disabled = false;
-            submitButton.textContent = originalButtonText;
-        }
-    });
-}
-
-/**
- * Initialize a form with validation and submission handling
- * @param {string} formSelector - CSS selector for the form
- * @param {Function} submitCallback - Function to handle the form data
- * @param {Function} successCallback - Function to handle successful submission
- * @param {Function} errorCallback - Function to handle submission errors
- */
-function initForm(formSelector, submitCallback, successCallback, errorCallback) {
-    const form = document.querySelector(formSelector);
-    if (!form) {
-        console.error(`Form not found: ${formSelector}`);
+async function handleIngredientForm(event) {
+    event.preventDefault();
+    
+    // Validate form
+    if (!Validator.validateForm(this)) {
         return;
     }
     
-    handleFormSubmit(form, submitCallback, successCallback, errorCallback);
+    const formData = new FormData(this);
+    const ingredient = {
+        nombre: formData.get('nombre'),
+        unidad_medida: formData.get('unidad_medida'),
+        precio_compra: parseFloat(formData.get('precio_compra')) || 0,
+        cantidad_actual: parseFloat(formData.get('cantidad_actual')) || 0,
+        stock_minimo: parseFloat(formData.get('stock_minimo')) || 0
+    };
+    
+    try {
+        const ingredientId = formData.get('id');
+        let response;
+        
+        if (ingredientId) {
+            // Update existing ingredient
+            response = await API.put(API.endpoints.ingredientes.update(ingredientId), ingredient);
+            Toast.show('Ingrediente actualizado correctamente', 'success');
+        } else {
+            // Create new ingredient
+            response = await API.post(API.endpoints.ingredientes.create, ingredient);
+            Toast.show('Ingrediente creado correctamente', 'success');
+            this.reset();
+        }
+        
+        // Redirect to ingredients list after a short delay
+        setTimeout(() => {
+            window.location.href = '/ingredientes';
+        }, 1500);
+    } catch (error) {
+        Toast.show(`Error: ${error.message}`, 'error');
+    }
+}
+
+/**
+ * Handle product form submission
+ * @param {Event} event - Form submit event
+ */
+async function handleProductForm(event) {
+    event.preventDefault();
+    
+    // Validate form
+    if (!Validator.validateForm(this)) {
+        return;
+    }
+    
+    const formData = new FormData(this);
+    const product = {
+        nombre: formData.get('nombre'),
+        categoria: formData.get('categoria'),
+        subcategoria: formData.get('subcategoria'),
+        precio_venta: parseFloat(formData.get('precio_venta')) || 0
+    };
+    
+    try {
+        const productId = formData.get('id');
+        let response;
+        
+        if (productId) {
+            // Update existing product
+            response = await API.put(API.endpoints.articulos.update(productId), product);
+            Toast.show('Artículo actualizado correctamente', 'success');
+        } else {
+            // Create new product
+            response = await API.post(API.endpoints.articulos.create, product);
+            Toast.show('Artículo creado correctamente', 'success');
+            this.reset();
+        }
+        
+        // Redirect to products list after a short delay
+        setTimeout(() => {
+            window.location.href = '/articulos';
+        }, 1500);
+    } catch (error) {
+        Toast.show(`Error: ${error.message}`, 'error');
+    }
+}
+
+/**
+ * Handle product composition form submission
+ * @param {Event} event - Form submit event
+ */
+async function handleCompositionForm(event) {
+    event.preventDefault();
+    
+    // Validate form
+    if (!Validator.validateForm(this)) {
+        return;
+    }
+    
+    const formData = new FormData(this);
+    const articleId = formData.get('articulo_id');
+    const ingredientId = formData.get('ingrediente_id');
+    const cantidad = parseFloat(formData.get('cantidad')) || 0;
+    
+    try {
+        const composition = {
+            ingrediente_id: ingredientId,
+            cantidad: cantidad
+        };
+        
+        await API.post(API.endpoints.articulos.addComposicion(articleId), composition);
+        Toast.show('Ingrediente agregado correctamente', 'success');
+        
+        // Refresh the composition list
+        loadComposition(articleId);
+        
+        // Reset the form fields
+        document.getElementById('ingrediente_id').value = '';
+        document.getElementById('cantidad').value = '';
+    } catch (error) {
+        Toast.show(`Error: ${error.message}`, 'error');
+    }
+}
+
+/**
+ * Load composition for a product
+ * @param {number} articleId - Product ID
+ */
+async function loadComposition(articleId) {
+    try {
+        const composition = await API.get(API.endpoints.articulos.getComposicion(articleId));
+        const compositionList = document.getElementById('composition-list');
+        
+        if (compositionList) {
+            compositionList.innerHTML = '';
+            
+            if (composition.length === 0) {
+                compositionList.innerHTML = '<tr><td colspan="3">No hay ingredientes en este artículo</td></tr>';
+                return;
+            }
+            
+            composition.forEach(item => {
+                compositionList.innerHTML += `
+                    <tr>
+                        <td>${item.ingrediente_nombre}</td>
+                        <td>${item.cantidad} ${item.unidad_medida}</td>
+                        <td>
+                            <button class="btn btn-danger btn-sm delete-composition" 
+                                    data-id="${item.id}" 
+                                    data-ingrediente="${item.ingrediente_nombre}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            // Add event listeners to delete buttons
+            initDeleteCompositionButtons();
+        }
+    } catch (error) {
+        Toast.show(`Error al cargar la composición: ${error.message}`, 'error');
+    }
+}
+
+/**
+ * Initialize delete composition buttons
+ */
+function initDeleteCompositionButtons() {
+    const deleteButtons = document.querySelectorAll('.delete-composition');
+    
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', async (event) => {
+            event.preventDefault();
+            
+            const id = button.dataset.id;
+            const ingredientName = button.dataset.ingrediente;
+            
+            if (confirm(`¿Estás seguro de eliminar ${ingredientName} de la composición?`)) {
+                try {
+                    await API.delete(API.endpoints.articulos.deleteComposicion(id));
+                    Toast.show('Ingrediente eliminado correctamente', 'success');
+                    
+                    // Remove the row from the table
+                    button.closest('tr').remove();
+                    
+                    // If no more rows, show the empty message
+                    const compositionList = document.getElementById('composition-list');
+                    if (compositionList.children.length === 0) {
+                        compositionList.innerHTML = '<tr><td colspan="3">No hay ingredientes en este artículo</td></tr>';
+                    }
+                } catch (error) {
+                    Toast.show(`Error: ${error.message}`, 'error');
+                }
+            }
+        });
+    });
+}
+
+/**
+ * Initialize delete confirmations
+ */
+function initDeleteConfirmations() {
+    // Handle ingredient delete confirmations
+    const deleteIngredientButtons = document.querySelectorAll('.delete-ingredient');
+    deleteIngredientButtons.forEach(button => {
+        button.addEventListener('click', async (event) => {
+            event.preventDefault();
+            
+            const id = button.dataset.id;
+            const name = button.dataset.name;
+            
+            if (confirm(`¿Estás seguro de eliminar el ingrediente "${name}"?`)) {
+                try {
+                    await API.delete(API.endpoints.ingredientes.delete(id));
+                    Toast.show('Ingrediente eliminado correctamente', 'success');
+                    
+                    // Remove the row or card from the list
+                    const element = button.closest('.item-card') || button.closest('tr');
+                    element.remove();
+                } catch (error) {
+                    Toast.show(`Error: ${error.message}`, 'error');
+                }
+            }
+        });
+    });
+    
+    // Handle product delete confirmations
+    const deleteProductButtons = document.querySelectorAll('.delete-product');
+    deleteProductButtons.forEach(button => {
+        button.addEventListener('click', async (event) => {
+            event.preventDefault();
+            
+            const id = button.dataset.id;
+            const name = button.dataset.name;
+            
+            if (confirm(`¿Estás seguro de eliminar el artículo "${name}"?`)) {
+                try {
+                    await API.delete(API.endpoints.articulos.delete(id));
+                    Toast.show('Artículo eliminado correctamente', 'success');
+                    
+                    // Remove the row or card from the list
+                    const element = button.closest('.item-card') || button.closest('tr');
+                    element.remove();
+                } catch (error) {
+                    Toast.show(`Error: ${error.message}`, 'error');
+                }
+            }
+        });
+    });
 } 

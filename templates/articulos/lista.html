@@ -1,0 +1,141 @@
+{% extends "layout.html" %}
+
+{% block title %}Listado de Artículos - Inventario Zombie{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Artículos</h1>
+    <a href="{{ url_for('articulos_web.nuevo') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Nuevo Artículo
+    </a>
+</div>
+
+<div class="search-box">
+    <input type="text" id="search-input" placeholder="Buscar artículo...">
+    <button id="search-button" class="btn">
+        <i class="fas fa-search"></i>
+    </button>
+</div>
+
+<!-- Mobile Card View (default for small screens) -->
+<div class="item-list" id="article-cards">
+    {% for articulo in articulos %}
+    <div class="item-card">
+        <h3>{{ articulo.nombre }}</h3>
+        <div class="item-detail">
+            <span>Categoría:</span>
+            <span>{{ articulo.categoria }}</span>
+        </div>
+        {% if articulo.subcategoria %}
+        <div class="item-detail">
+            <span>Subcategoría:</span>
+            <span>{{ articulo.subcategoria }}</span>
+        </div>
+        {% endif %}
+        <div class="item-detail">
+            <span>Precio de Venta:</span>
+            <span>${{ "%.2f"|format(articulo.precio_venta) }}</span>
+        </div>
+        <div class="item-actions">
+            <a href="{{ url_for('articulos_web.composicion', id=articulo.id) }}" class="btn btn-info btn-sm" title="Ver composición">
+                <i class="fas fa-list"></i>
+            </a>
+            <a href="{{ url_for('articulos_web.editar', id=articulo.id) }}" class="btn btn-secondary btn-sm" title="Editar">
+                <i class="fas fa-edit"></i>
+            </a>
+            <button class="btn btn-danger btn-sm delete-product" 
+                   data-id="{{ articulo.id }}" 
+                   data-name="{{ articulo.nombre }}" title="Eliminar">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-hamburger fa-3x"></i>
+        <p>No hay artículos registrados</p>
+        <a href="{{ url_for('articulos_web.nuevo') }}" class="btn btn-primary">
+            Agregar Artículo
+        </a>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Table View (for larger screens) -->
+<div class="table-responsive d-none d-md-block">
+    <table>
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Categoría</th>
+                <th>Subcategoría</th>
+                <th>Precio de Venta</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for articulo in articulos %}
+            <tr>
+                <td>{{ articulo.nombre }}</td>
+                <td>{{ articulo.categoria }}</td>
+                <td>{{ articulo.subcategoria or '-' }}</td>
+                <td>${{ "%.2f"|format(articulo.precio_venta) }}</td>
+                <td>
+                    <a href="{{ url_for('articulos_web.composicion', id=articulo.id) }}" class="btn btn-info btn-sm" title="Ver composición">
+                        <i class="fas fa-list"></i>
+                    </a>
+                    <a href="{{ url_for('articulos_web.editar', id=articulo.id) }}" class="btn btn-secondary btn-sm" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    <button class="btn btn-danger btn-sm delete-product" 
+                           data-id="{{ articulo.id }}" 
+                           data-name="{{ articulo.nombre }}" title="Eliminar">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" class="text-center">No hay artículos registrados</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/api.js') }}"></script>
+<script src="{{ url_for('static', filename='js/forms.js') }}"></script>
+<script>
+    // Search functionality
+    document.getElementById('search-input').addEventListener('keyup', function() {
+        const searchTerm = this.value.toLowerCase();
+        const items = document.querySelectorAll('.item-card, table tbody tr:not(.empty-row)');
+        
+        items.forEach(item => {
+            if (item.classList.contains('item-card')) {
+                // For card view
+                const name = item.querySelector('h3').textContent.toLowerCase();
+                const category = item.querySelector('.item-detail:nth-child(2) span:last-child').textContent.toLowerCase();
+                
+                if (name.includes(searchTerm) || category.includes(searchTerm)) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            } else {
+                // For table view
+                const name = item.querySelector('td:nth-child(1)').textContent.toLowerCase();
+                const category = item.querySelector('td:nth-child(2)').textContent.toLowerCase();
+                
+                if (name.includes(searchTerm) || category.includes(searchTerm)) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            }
+        });
+    });
+</script>
+{% endblock %} 

@@ -1,0 +1,69 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    {% if articulo %}Editar Artículo{% else %}Nuevo Artículo{% endif %} - Inventario Zombie
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{% if articulo %}Editar Artículo{% else %}Nuevo Artículo{% endif %}</h1>
+    <a href="{{ url_for('articulos_web.index') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Volver
+    </a>
+</div>
+
+<form id="product-form" class="mobile-form">
+    {% if articulo %}
+    <input type="hidden" name="id" value="{{ articulo.id }}">
+    {% endif %}
+    
+    <div class="form-group">
+        <label for="nombre">Nombre <span class="required">*</span></label>
+        <input type="text" id="nombre" name="nombre" required 
+               value="{{ articulo.nombre if articulo else '' }}">
+    </div>
+    
+    <div class="form-group">
+        <label for="categoria">Categoría <span class="required">*</span></label>
+        <select id="categoria" name="categoria" required>
+            <option value="" disabled {% if not articulo %}selected{% endif %}>Seleccione una categoría</option>
+            <option value="Entradas" {% if articulo and articulo.categoria == 'Entradas' %}selected{% endif %}>Entradas</option>
+            <option value="Platos fuertes" {% if articulo and articulo.categoria == 'Platos fuertes' %}selected{% endif %}>Platos fuertes</option>
+            <option value="Postres" {% if articulo and articulo.categoria == 'Postres' %}selected{% endif %}>Postres</option>
+            <option value="Bebidas" {% if articulo and articulo.categoria == 'Bebidas' %}selected{% endif %}>Bebidas</option>
+            <option value="Acompañamientos" {% if articulo and articulo.categoria == 'Acompañamientos' %}selected{% endif %}>Acompañamientos</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="subcategoria">Subcategoría</label>
+        <input type="text" id="subcategoria" name="subcategoria" 
+               value="{{ articulo.subcategoria if articulo and articulo.subcategoria else '' }}">
+    </div>
+    
+    <div class="form-group">
+        <label for="precio_venta">Precio de Venta <span class="required">*</span></label>
+        <div class="input-addon">
+            <span class="addon-prefix">$</span>
+            <input type="number" id="precio_venta" name="precio_venta" step="0.01" min="0" required
+                   value="{{ articulo.precio_venta if articulo else '' }}">
+        </div>
+    </div>
+    
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary btn-block">
+            <i class="fas fa-save"></i> Guardar
+        </button>
+        {% if articulo %}
+        <a href="{{ url_for('articulos_web.composicion', id=articulo.id) }}" class="btn btn-secondary btn-block">
+            <i class="fas fa-list"></i> Administrar Composición
+        </a>
+        {% endif %}
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/api.js') }}"></script>
+<script src="{{ url_for('static', filename='js/forms.js') }}"></script>
+{% endblock %} 

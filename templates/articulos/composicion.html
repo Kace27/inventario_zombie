@@ -1,0 +1,260 @@
+{% extends "layout.html" %}
+
+{% block title %}Composición de {{ articulo.nombre }} - Inventario Zombie{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Composición: {{ articulo.nombre }}</h1>
+    <a href="{{ url_for('articulos_web.index') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Volver
+    </a>
+</div>
+
+<div class="product-details">
+    <div class="detail-item">
+        <strong>Categoría:</strong> {{ articulo.categoria }}
+    </div>
+    {% if articulo.subcategoria %}
+    <div class="detail-item">
+        <strong>Subcategoría:</strong> {{ articulo.subcategoria }}
+    </div>
+    {% endif %}
+    <div class="detail-item">
+        <strong>Precio de Venta:</strong> ${{ "%.2f"|format(articulo.precio_venta) }}
+    </div>
+</div>
+
+<div class="composition-section">
+    <h2>Ingredientes</h2>
+    
+    <!-- Current Composition List -->
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Ingrediente</th>
+                    <th>Cantidad</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="composition-list">
+                {% for comp in composicion %}
+                <tr>
+                    <td>{{ comp.ingrediente_nombre }}</td>
+                    <td>{{ comp.cantidad }} {{ comp.unidad_medida }}</td>
+                    <td>
+                        <button class="btn btn-danger btn-sm delete-composition" 
+                                data-id="{{ comp.id }}" 
+                                data-ingrediente="{{ comp.ingrediente_nombre }}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="3" class="text-center">No hay ingredientes en este artículo</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Add New Ingredient Form -->
+    <div class="composition-form-container">
+        <h3>Agregar Ingrediente</h3>
+        <form id="composition-form" class="mobile-form">
+            <input type="hidden" name="articulo_id" value="{{ articulo.id }}">
+            
+            <div class="form-group">
+                <label for="ingrediente_id">Ingrediente <span class="required">*</span></label>
+                <select id="ingrediente_id" name="ingrediente_id" required>
+                    <option value="" disabled selected>Seleccione un ingrediente</option>
+                    {% for ingrediente in ingredientes %}
+                    <option value="{{ ingrediente.id }}">{{ ingrediente.nombre }} ({{ ingrediente.unidad_medida }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="cantidad">Cantidad <span class="required">*</span></label>
+                <input type="number" id="cantidad" name="cantidad" step="0.01" min="0.01" required>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Agregar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Cost Summary -->
+<div class="cost-summary">
+    <h3>Resumen de Costos</h3>
+    <div class="detail-item">
+        <strong>Costo Total de Ingredientes:</strong> <span id="total-cost">${{ "%.2f"|format(costo_total) }}</span>
+    </div>
+    <div class="detail-item">
+        <strong>Ganancia Estimada:</strong> <span id="estimated-profit">${{ "%.2f"|format(articulo.precio_venta - costo_total) }}</span>
+    </div>
+    <div class="detail-item">
+        <strong>Margen de Ganancia:</strong> 
+        <span id="profit-margin">
+            {% if articulo.precio_venta > 0 %}
+            {{ "%.2f"|format(((articulo.precio_venta - costo_total) / articulo.precio_venta) * 100) }}%
+            {% else %}
+            0.00%
+            {% endif %}
+        </span>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/api.js') }}"></script>
+<script src="{{ url_for('static', filename='js/forms.js') }}"></script>
+<script>
+    // Set variables from Jinja2 templates in a safer way
+    const articuloData = {
+        id: "{{ articulo.id }}",
+        precioVenta: "{{ articulo.precio_venta }}"
+    };
+    
+    // When page loads, initialize delete buttons
+    document.addEventListener('DOMContentLoaded', function() {
+        initDeleteCompositionButtons();
+    });
+    
+    // Load the composition data
+    function loadComposition(articleId) {
+        const url = `/api/articulos/${articleId}/composicion`;
+        
+        fetch(url)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error al cargar los datos');
+                }
+                return response.json();
+            })
+            .then(data => {
+                updateCompositionList(data.composicion || data);
+                updateCostSummary(data.composicion || data);
+            })
+            .catch(error => {
+                Toast.show(`Error: ${error.message}`, 'error');
+            });
+    }
+    
+    // Update the composition list
+    function updateCompositionList(composicion) {
+        const compositionList = document.getElementById('composition-list');
+        
+        if (!compositionList) return;
+        
+        compositionList.innerHTML = '';
+        
+        if (composicion.length === 0) {
+            compositionList.innerHTML = '<tr><td colspan="3" class="text-center">No hay ingredientes en este artículo</td></tr>';
+            return;
+        }
+        
+        composicion.forEach(item => {
+            compositionList.innerHTML += `
+                <tr>
+                    <td>${item.ingrediente_nombre}</td>
+                    <td>${item.cantidad} ${item.unidad_medida}</td>
+                    <td>
+                        <button class="btn btn-danger btn-sm delete-composition" 
+                                data-id="${item.id}" 
+                                data-ingrediente="${item.ingrediente_nombre}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        // Add event listeners to delete buttons
+        initDeleteCompositionButtons();
+    }
+    
+    // Initialize delete composition buttons
+    function initDeleteCompositionButtons() {
+        const deleteButtons = document.querySelectorAll('.delete-composition');
+        
+        deleteButtons.forEach(button => {
+            // Remove existing event listeners to avoid duplicates
+            const newButton = button.cloneNode(true);
+            button.parentNode.replaceChild(newButton, button);
+            
+            newButton.addEventListener('click', async (event) => {
+                event.preventDefault();
+                
+                const id = newButton.dataset.id;
+                const ingredientName = newButton.dataset.ingrediente;
+                
+                if (confirm(`¿Estás seguro de eliminar ${ingredientName} de la composición?`)) {
+                    try {
+                        const endpoint = `/api/composicion/${id}`;
+                        const response = await fetch(endpoint, {
+                            method: 'DELETE'
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`Error: ${response.statusText}`);
+                        }
+                        
+                        // Get the response data
+                        const data = await response.json();
+                        
+                        // Show success message
+                        Toast.show('Ingrediente eliminado correctamente', 'success');
+                        
+                        // Remove the row from the table
+                        newButton.closest('tr').remove();
+                        
+                        // If no more rows, show the empty message
+                        const compositionList = document.getElementById('composition-list');
+                        if (compositionList.children.length === 0) {
+                            compositionList.innerHTML = '<tr><td colspan="3" class="text-center">No hay ingredientes en este artículo</td></tr>';
+                        }
+                        
+                        // Update cost summary by reloading composition
+                        loadComposition(articuloData.id);
+                    } catch (error) {
+                        Toast.show(`Error: ${error.message}`, 'error');
+                    }
+                }
+            });
+        });
+    }
+    
+    // Update cost summary
+    function updateCostSummary(composicion) {
+        const totalCostElement = document.getElementById('total-cost');
+        const estimatedProfitElement = document.getElementById('estimated-profit');
+        const profitMarginElement = document.getElementById('profit-margin');
+        
+        if (!totalCostElement || !estimatedProfitElement || !profitMarginElement) return;
+        
+        // Calculate total cost
+        let totalCost = 0;
+        composicion.forEach(item => {
+            totalCost += item.precio_compra * item.cantidad;
+        });
+        
+        // Get price
+        const precioVenta = parseFloat(articuloData.precioVenta);
+        
+        // Update elements
+        totalCostElement.textContent = `$${totalCost.toFixed(2)}`;
+        
+        const profit = precioVenta - totalCost;
+        estimatedProfitElement.textContent = `$${profit.toFixed(2)}`;
+        
+        const margin = precioVenta > 0 ? ((profit / precioVenta) * 100) : 0;
+        profitMarginElement.textContent = `${margin.toFixed(2)}%`;
+    }
+</script>
+{% endblock %} 

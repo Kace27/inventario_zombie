@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Inventario Zombie{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     {% block head %}{% endblock %}
 </head>
 <body>
@@ -13,17 +14,32 @@
             <div class="logo">
                 <a href="{{ url_for('index') }}">Inventario Zombie</a>
             </div>
+            <div class="hamburger">
+                <div></div>
+                <div></div>
+                <div></div>
+            </div>
             <ul class="nav-links">
-                <li><a href="#">Cocina</a></li>
-                <li><a href="#">Ventas</a></li>
-                <li><a href="#">Ingredientes</a></li>
-                <li><a href="#">Artículos</a></li>
-                <li><a href="#">Reportes</a></li>
+                <li><a href="#"><i class="fas fa-utensils"></i> Cocina</a></li>
+                <li><a href="#"><i class="fas fa-chart-line"></i> Ventas</a></li>
+                <li><a href="{{ url_for('ingredientes_web.index') }}"><i class="fas fa-carrot"></i> Ingredientes</a></li>
+                <li><a href="{{ url_for('articulos_web.index') }}"><i class="fas fa-hamburger"></i> Artículos</a></li>
+                <li><a href="#"><i class="fas fa-file-alt"></i> Reportes</a></li>
             </ul>
         </nav>
     </header>
     
-    <main>
+    <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
         {% block content %}{% endblock %}
     </main>
     
@@ -31,7 +47,34 @@
         <p>&copy; 2023 Inventario Zombie</p>
     </footer>
     
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // Hamburger menu functionality
+        const hamburger = document.querySelector('.hamburger');
+        const navLinks = document.querySelector('.nav-links');
+        
+        hamburger.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+            hamburger.classList.toggle('active');
+        });
+        
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.nav-links') && !e.target.closest('.hamburger') && navLinks.classList.contains('active')) {
+                navLinks.classList.remove('active');
+                hamburger.classList.remove('active');
+            }
+        });
+        
+        // Add active class to current nav item
+        const currentLocation = window.location.pathname;
+        const navItems = document.querySelectorAll('.nav-links a');
+        navItems.forEach(item => {
+            const href = item.getAttribute('href');
+            if (href !== '#' && currentLocation.includes(href)) {
+                item.classList.add('active');
+            }
+        });
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html> 
