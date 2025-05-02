@@ -4,6 +4,7 @@ from database import get_db
 from utils.csv_parser import parse_csv, validate_sales_data
 from utils.error_handler import handle_error
 import json
+import datetime
 
 bp = Blueprint('ventas', __name__, url_prefix='/api/ventas')
 
@@ -13,8 +14,7 @@ def importar_ventas():
     Import sales data from a CSV file.
     
     Expected request:
-    - file: CSV file with sales data
-    - column_mapping: JSON string with mapping of CSV columns to database columns (optional)
+    - file: CSV file with sales data in a fixed format
     
     Returns:
     - JSON response with import results
@@ -34,13 +34,23 @@ def importar_ventas():
         if not file.filename.endswith('.csv'):
             return jsonify({"success": False, "error": "File must be a CSV"}), 400
         
-        # Get column mapping if provided
-        column_mapping = None
-        if 'column_mapping' in request.form:
-            try:
-                column_mapping = json.loads(request.form['column_mapping'])
-            except json.JSONDecodeError:
-                return jsonify({"success": False, "error": "Invalid column mapping format"}), 400
+        # Define the fixed column mapping based on the known CSV format
+        # The format: Artículo,REF,Categoria,Articulos vendidos,Ventas brutas,Articulos reembolsados,Reembolsos,Descuentos,Ventas netas,Costo de los bienes,Beneficio bruto,Margen,Impuestos
+        column_mapping = {
+            'articulo': 0,           # Artículo
+            'ref': 1,                # REF
+            'categoria': 2,          # Categoria
+            'articulos_vendidos': 3, # Articulos vendidos
+            'ventas_brutas': 4,      # Ventas brutas
+            'articulos_reembolsados': 5,  # Articulos reembolsados
+            'reembolsos': 6,         # Reembolsos
+            'descuentos': 7,         # Descuentos
+            'ventas_netas': 8,       # Ventas netas
+            'costo_bienes': 9,       # Costo de los bienes
+            'beneficio_bruto': 10,   # Beneficio bruto
+            'margen': 11,            # Margen
+            'impuestos': 12          # Impuestos
+        }
         
         # Parse the CSV file
         file_content = file.read()
@@ -49,12 +59,45 @@ def importar_ventas():
         if not parse_result["success"]:
             return jsonify({"success": False, "error": parse_result["error"]}), 400
         
-        # Validate the sales data
-        sales_data = parse_result["data"]
-        validation_result = validate_sales_data(sales_data)
+        # Get the raw data
+        raw_data = parse_result["data"]
         
-        if not validation_result["success"]:
-            return jsonify({"success": False, "errors": validation_result["errors"]}), 400
+        # Process the data to match the database schema
+        sales_data = []
+        current_date = datetime.datetime.now()
+        
+        for row in raw_data:
+            # Skip header row if accidentally included
+            if row.get('articulo') == 'Artículo':
+                continue
+                
+            # Add current date and time to each row
+            row['fecha'] = current_date.strftime('%Y-%m-%d')
+            row['hora'] = current_date.strftime('%H:%M:%S')
+                
+            # Clean data and prepare for database
+            processed_row = {
+                'fecha': current_date.strftime('%Y-%m-%d'),
+                'hora': current_date.strftime('%H:%M:%S'),
+                'articulo': row.get('articulo', ''),
+                'categoria': row.get('categoria', ''),
+                'articulos_vendidos': row.get('articulos_vendidos', '0').replace('.', ''),  # Remove thousands separator
+                'precio_unitario': float(row.get('ventas_brutas', '0').replace(',', '.')) / float(row.get('articulos_vendidos', '1').replace('.', '')) if float(row.get('articulos_vendidos', '0').replace('.', '')) > 0 else 0,
+                'total': row.get('ventas_netas', '0').replace(',', '.'),
+                'costo_estimado': row.get('costo_bienes', '0').replace(',', '.'),
+                'ganancia_estimada': row.get('beneficio_bruto', '0').replace(',', '.'),
+                'porcentaje_ganancia': row.get('margen', '0%').replace('%', ''),
+                'iva': row.get('impuestos', '0').replace(',', '.')
+            }
+            
+            sales_data.append(processed_row)
+        
+        # Custom validation for the processed data
+        if not sales_data:
+            return jsonify({"success": False, "error": "No valid sales data found in the CSV"}), 400
+        
+        # Skip the standard validation since we're adding fecha and hora ourselves
+        # and directly process the data
         
         # Process and save the data to the database
         db = get_db()
@@ -62,6 +105,7 @@ def importar_ventas():
         
         # Initialize counters
         inserted_count = 0
+        created_articles_count = 0
         errors = []
         
         # Begin transaction
@@ -72,16 +116,43 @@ def importar_ventas():
                 try:
                     # Check if the article exists
                     articulo_nombre = row.get('articulo')
+                    articulo_categoria = row.get('categoria')
+                    precio_unitario = row.get('precio_unitario', 0)
+                    
                     cursor.execute(
                         "SELECT id FROM ArticulosVendidos WHERE nombre = ?",
                         (articulo_nombre,)
                     )
                     articulo_result = cursor.fetchone()
                     
-                    # If the article doesn't exist, we still save the sale but log a warning
-                    articulo_id = articulo_result[0] if articulo_result else None
+                    # If the article doesn't exist, create it
+                    if not articulo_result:
+                        try:
+                            # Insert new article into ArticulosVendidos
+                            cursor.execute(
+                                """
+                                INSERT INTO ArticulosVendidos (nombre, categoria, precio_venta)
+                                VALUES (?, ?, ?)
+                                """,
+                                (articulo_nombre, articulo_categoria, precio_unitario)
+                            )
+                            articulo_id = cursor.lastrowid
+                            created_articles_count += 1
+                            
+                            # Log article creation
+                            current_app.logger.info(f"Created new article: {articulo_nombre} (ID: {articulo_id})")
+                            
+                        except sqlite3.Error as e:
+                            current_app.logger.error(f"Error creating article {articulo_nombre}: {str(e)}")
+                            errors.append({
+                                "articulo": articulo_nombre,
+                                "error": f"Error creating article: {str(e)}"
+                            })
+                            articulo_id = None
+                    else:
+                        articulo_id = articulo_result[0]
                     
-                    # Prepare the insert statement
+                    # Prepare the insert statement for the sale
                     columns = ', '.join(row.keys())
                     placeholders = ', '.join(['?'] * len(row))
                     
@@ -91,9 +162,8 @@ def importar_ventas():
                     )
                     inserted_count += 1
                     
-                    # If article exists, update inventory based on composition
+                    # If article exists and has composition, update inventory based on composition
                     if articulo_id:
-                        # Get the composition of the article
                         cursor.execute(
                             """
                             SELECT ca.ingrediente_id, ca.cantidad, i.nombre
@@ -105,27 +175,29 @@ def importar_ventas():
                         )
                         composition = cursor.fetchall()
                         
-                        # Calculate quantity sold
-                        cantidad_vendida = int(row.get('articulos_vendidos', 0))
-                        
-                        # Update inventory for each ingredient
-                        for comp_row in composition:
-                            ingrediente_id = comp_row[0]
-                            cantidad_por_unidad = comp_row[1]
-                            ingrediente_nombre = comp_row[2]
+                        # If composition exists, update inventory
+                        if composition:
+                            # Calculate quantity sold
+                            cantidad_vendida = int(row.get('articulos_vendidos', 0))
                             
-                            # Calculate total quantity to reduce
-                            cantidad_reducir = cantidad_por_unidad * cantidad_vendida
-                            
-                            # Update the ingredient quantity
-                            cursor.execute(
-                                """
-                                UPDATE Ingredientes
-                                SET cantidad_actual = cantidad_actual - ?
-                                WHERE id = ?
-                                """,
-                                (cantidad_reducir, ingrediente_id)
-                            )
+                            # Update inventory for each ingredient
+                            for comp_row in composition:
+                                ingrediente_id = comp_row[0]
+                                cantidad_por_unidad = comp_row[1]
+                                ingrediente_nombre = comp_row[2]
+                                
+                                # Calculate total quantity to reduce
+                                cantidad_reducir = cantidad_por_unidad * cantidad_vendida
+                                
+                                # Update the ingredient quantity
+                                cursor.execute(
+                                    """
+                                    UPDATE Ingredientes
+                                    SET cantidad_actual = cantidad_actual - ?
+                                    WHERE id = ?
+                                    """,
+                                    (cantidad_reducir, ingrediente_id)
+                                )
                 
                 except Exception as e:
                     errors.append({
@@ -137,9 +209,19 @@ def importar_ventas():
             db.commit()
             
             # Return the results
+            success_message = f"Successfully imported {inserted_count} sales records"
+            if created_articles_count > 0:
+                success_message += f" and created {created_articles_count} new articles"
+            
+            # Spanish messages for the user interface
+            spanish_message = f"Se importaron {inserted_count} registros de ventas"
+            if created_articles_count > 0:
+                spanish_message += f" y se crearon {created_articles_count} nuevos artículos"
+                
             return jsonify({
                 "success": True,
-                "message": f"Successfully imported {inserted_count} sales records",
+                "message": success_message,
+                "spanish_message": spanish_message,
                 "errors": errors if errors else None
             })
             
