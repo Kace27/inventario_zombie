@@ -36,6 +36,7 @@
     
     /* Ingredient categories */
     .category-header {
+        font-size: 2em;
         background-color: #f8f9fa;
         padding: 12px;
         margin-top: 8px;
@@ -78,6 +79,7 @@
     }
     
     .ingredient-name {
+        font-size: 1.5em;
         font-weight: 500;
         flex: 1;
         margin-right: 10px;
@@ -189,6 +191,81 @@
         color: #C62828;
     }
     
+    /* Modal styles */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.4);
+    }
+    
+    .modal-content {
+        background-color: #fefefe;
+        margin: 15% auto;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        width: 80%;
+        max-width: 600px;
+    }
+    
+    .modal-header {
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .modal-header h2 {
+        margin: 0;
+        color: #333;
+    }
+    
+    .modal-body {
+        margin-bottom: 20px;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+    
+    .modal-btn {
+        padding: 10px 15px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+    
+    .modal-btn-cancel {
+        background-color: #f1f1f1;
+        color: #333;
+    }
+    
+    .modal-btn-confirm {
+        background-color: #4CAF50;
+        color: white;
+    }
+    
+    .order-summary-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .order-summary-item:last-child {
+        border-bottom: none;
+    }
+    
     /* Media queries for larger screens */
     @media (min-width: 768px) {
         .container {
@@ -199,7 +276,7 @@
     
     @media (min-width: 992px) {
         .container {
-            max-width: 960px;
+            max-width: 1140px;
         }
     }
 </style>
@@ -222,8 +299,24 @@
         
         <textarea id="notas" name="notas" class="notes-field" rows="2" placeholder="Notas (opcional)"></textarea>
         
-        <button type="submit" class="action-button">Registrar recepción</button>
+        <button type="submit" class="action-button">Confirmar pedido</button>
     </form>
+
+    <!-- Modal de confirmación -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Resumen del pedido</h2>
+            </div>
+            <div class="modal-body" id="orderSummary">
+                <!-- El resumen del pedido se generará aquí dinámicamente -->
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn modal-btn-cancel" id="cancelBtn">Cancelar</button>
+                <button class="modal-btn modal-btn-confirm" id="confirmBtn">Confirmar</button>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -235,18 +328,30 @@
         const statusMessage = document.getElementById('statusMessage');
         const ingredientSearch = document.getElementById('ingredientSearch');
         const ingredientContainer = document.getElementById('ingredientContainer');
+        const confirmModal = document.getElementById('confirmModal');
+        const orderSummary = document.getElementById('orderSummary');
+        const confirmBtn = document.getElementById('confirmBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
         
         // State variables
         let ingredientsList = [];
         let categorizedIngredients = {};
-        let selectedIngredientId = null;
-        let selectedQuantity = 0;
+        let selectedIngredients = {};
         
         // Initialize - load ingredients on page load
         loadIngredients();
         
         // Event listeners
         receptionForm.addEventListener('submit', handleFormSubmit);
+        confirmBtn.addEventListener('click', submitReception);
+        cancelBtn.addEventListener('click', closeModal);
+        
+        // Close modal when clicking outside
+        window.addEventListener('click', function(event) {
+            if (event.target === confirmModal) {
+                closeModal();
+            }
+        });
         
         ingredientSearch.addEventListener('input', function() {
             const searchTerm = this.value.trim().toLowerCase();
@@ -400,8 +505,11 @@
         
         // Function to update the selected ingredient
         function updateSelectedIngredient(id, quantity) {
-            selectedIngredientId = id;
-            selectedQuantity = quantity;
+            if (quantity > 0) {
+                selectedIngredients[id] = quantity;
+            } else {
+                delete selectedIngredients[id];
+            }
         }
         
         // Function to filter ingredients based on search term
@@ -464,48 +572,131 @@
         function handleFormSubmit(e) {
             e.preventDefault();
             
-            if (!selectedIngredientId) {
+            const ingredientIds = Object.keys(selectedIngredients);
+            
+            if (ingredientIds.length === 0) {
                 showStatus('error', 'Selecciona un ingrediente y ajusta la cantidad');
                 return;
             }
             
-            if (selectedQuantity <= 0) {
-                showStatus('error', 'La cantidad debe ser mayor que cero');
-                return;
+            showConfirmationModal();
+        }
+        
+        // Function to show confirmation modal with order summary
+        function showConfirmationModal() {
+            // Clear previous content
+            orderSummary.innerHTML = '';
+            
+            // Create summary of selected ingredients
+            for (const id in selectedIngredients) {
+                const quantity = selectedIngredients[id];
+                const ingredient = ingredientsList.find(ing => ing.id == id);
+                
+                if (ingredient) {
+                    const itemElement = document.createElement('div');
+                    itemElement.className = 'order-summary-item';
+                    itemElement.innerHTML = `
+                        <div>${ingredient.nombre}</div>
+                        <div>${quantity} ${ingredient.unidad_medida}</div>
+                    `;
+                    orderSummary.appendChild(itemElement);
+                }
             }
             
-            const formData = {
-                ingrediente_id: parseInt(selectedIngredientId),
-                cantidad_recibida: selectedQuantity,
-                notas: document.getElementById('notas').value
-            };
+            // Add notes if any
+            const notes = document.getElementById('notas').value.trim();
+            if (notes) {
+                const notesElement = document.createElement('div');
+                notesElement.className = 'order-summary-item';
+                notesElement.innerHTML = `
+                    <div><strong>Notas:</strong></div>
+                    <div>${notes}</div>
+                `;
+                orderSummary.appendChild(notesElement);
+            }
             
-            // Submit to API
-            fetch('/api/recepciones', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(formData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showStatus('success', data.message);
+            // Show modal
+            confirmModal.style.display = 'block';
+        }
+        
+        // Function to close modal
+        function closeModal() {
+            confirmModal.style.display = 'none';
+        }
+        
+        // Function to submit reception to API
+        function submitReception() {
+            const ingredientItems = [];
+            
+            // Prepare data for each ingredient
+            for (const id in selectedIngredients) {
+                ingredientItems.push({
+                    ingrediente_id: parseInt(id),
+                    cantidad_recibida: selectedIngredients[id]
+                });
+            }
+            
+            // Get notes
+            const notas = document.getElementById('notas').value;
+            
+            // Process each ingredient separately as the API expects a single ingredient
+            const processIngredient = (index) => {
+                if (index >= ingredientItems.length) {
+                    // All ingredients processed successfully
+                    showStatus('success', 'Todos los ingredientes fueron registrados correctamente');
                     
                     // Reset form
                     document.getElementById('notas').value = '';
-                    document.querySelector(`.quantity-value[data-id="${selectedIngredientId}"]`).value = "0";
-                    selectedIngredientId = null;
-                    selectedQuantity = 0;
-                } else {
-                    showStatus('error', data.error || 'Error al registrar la recepción');
+                    // Reset all quantity inputs
+                    document.querySelectorAll('.quantity-value').forEach(input => {
+                        input.value = "0";
+                    });
+                    selectedIngredients = {};
+                    
+                    // Close modal
+                    closeModal();
+                    return;
                 }
-            })
-            .catch(error => {
-                console.error('Error al registrar recepción:', error);
-                showStatus('error', 'Error al comunicarse con el servidor');
-            });
+                
+                const ingredient = ingredientItems[index];
+                const formData = {
+                    ingrediente_id: ingredient.ingrediente_id,
+                    cantidad_recibida: ingredient.cantidad_recibida,
+                    notas: notas
+                };
+                
+                fetch('/api/recepciones', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Continue with next ingredient
+                        processIngredient(index + 1);
+                    } else {
+                        showStatus('error', data.error || `Error al registrar ingrediente ${index + 1}`);
+                        // Close modal but don't reset form so user can try again
+                        closeModal();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error al registrar recepción:', error);
+                    showStatus('error', `Error al comunicarse con el servidor al procesar ingrediente ${index + 1}`);
+                    closeModal();
+                });
+            };
+            
+            // Start processing ingredients
+            if (ingredientItems.length > 0) {
+                processIngredient(0);
+            } else {
+                showStatus('error', 'No hay ingredientes seleccionados');
+                closeModal();
+            }
         }
         
         // Function to show status message

@@ -378,41 +378,68 @@
         function loadDashboardData() {
             // Fetch ingredients
             fetch('/api/ingredientes')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        ingredientsList = data.data;
-                        
-                        // Update dashboard counts
-                        totalIngredients.textContent = ingredientsList.length;
-                        
-                        const lowStockIngredients = ingredientsList.filter(ingredient => 
-                            ingredient.stock_minimo !== null && 
-                            ingredient.cantidad_actual <= ingredient.stock_minimo
-                        );
-                        lowStockCount.textContent = lowStockIngredients.length;
-                        
-                        // Render tables
-                        renderStockTable();
-                        renderAdjustTable();
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Error HTTP: ${response.status}`);
                     }
+                    return response.json();
+                })
+                .then(data => {
+                    // The API returns array of ingredients directly
+                    if (Array.isArray(data)) {
+                        ingredientsList = data;
+                    } else if (data.success && Array.isArray(data.data)) {
+                        // Fallback for possible future API format change
+                        ingredientsList = data.data;
+                    } else {
+                        console.error('Unexpected data format:', data);
+                        throw new Error('Formato de datos inesperado');
+                    }
+                    
+                    // Update dashboard counts
+                    totalIngredients.textContent = ingredientsList.length;
+                    
+                    const lowStockIngredients = ingredientsList.filter(ingredient => 
+                        ingredient.stock_minimo !== null && 
+                        ingredient.cantidad_actual <= ingredient.stock_minimo
+                    );
+                    lowStockCount.textContent = lowStockIngredients.length;
+                    
+                    // Render tables
+                    renderStockTable();
+                    renderAdjustTable();
                 })
                 .catch(error => {
                     console.error('Error loading ingredients:', error);
+                    totalIngredients.textContent = 'Error';
+                    lowStockCount.textContent = 'Error';
                 });
             
             // Fetch today's receptions
             const today = new Date().toISOString().split('T')[0];
             fetch(`/api/recepciones?fecha_inicio=${today}&fecha_fin=${today}`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Error HTTP: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
-                    if (data.success) {
+                    if (data.success && data.total !== undefined) {
                         todayReceptionsCount = data.total;
                         todayReceptions.textContent = todayReceptionsCount;
+                    } else if (data.success && Array.isArray(data.data)) {
+                        // If total is not provided, count the array length
+                        todayReceptionsCount = data.data.length;
+                        todayReceptions.textContent = todayReceptionsCount;
+                    } else {
+                        console.error('Unexpected receptions data format:', data);
+                        todayReceptions.textContent = 'Error';
                     }
                 })
                 .catch(error => {
                     console.error('Error loading receptions:', error);
+                    todayReceptions.textContent = 'Error';
                 });
         }
         
@@ -546,7 +573,9 @@
         
         // Function to open adjustment modal
         function openAdjustModal(id) {
-            const ingredient = ingredientsList.find(ing => ing.id === parseInt(id));
+            // Convert id to number for proper comparison
+            const numId = parseInt(id);
+            const ingredient = ingredientsList.find(ing => ing.id === numId);
             
             if (ingredient) {
                 adjustIngredientId.value = ingredient.id;
@@ -558,6 +587,9 @@
                 document.getElementById('adjustmentType').value = 'add';
                 
                 adjustModal.style.display = 'block';
+            } else {
+                console.error('Ingredient not found with id:', numId);
+                alert('Ingrediente no encontrado. Por favor, recarga la página.');
             }
         }
         
@@ -605,66 +637,82 @@
                     break;
             }
             
+            // Create the updated ingredient data object, preserving all fields
+            const updatedIngredient = {
+                nombre: ingredient.nombre,
+                unidad_medida: ingredient.unidad_medida,
+                precio_compra: ingredient.precio_compra,
+                cantidad_actual: newQuantity,
+                stock_minimo: ingredient.stock_minimo,
+                categoria: ingredient.categoria
+            };
+            
             // Update the ingredient via API
             fetch(`/api/ingredientes/${id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    nombre: ingredient.nombre,
-                    unidad_medida: ingredient.unidad_medida,
-                    precio_compra: ingredient.precio_compra,
-                    cantidad_actual: newQuantity,
-                    stock_minimo: ingredient.stock_minimo
-                })
+                body: JSON.stringify(updatedIngredient)
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Create adjustment record in the log (if such endpoint exists)
-                    try {
-                        fetch('/api/ajustes', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                ingrediente_id: id,
-                                cantidad_ajustada: type === 'add' ? quantity : (type === 'subtract' ? -quantity : (newQuantity - ingredient.cantidad_actual)),
-                                motivo: `${adjustmentDescription}. ${reason}`
-                            })
-                        });
-                    } catch (error) {
-                        console.warn('Ajuste log endpoint might not exist:', error);
-                    }
-                    
-                    // Update local data
-                    ingredient.cantidad_actual = newQuantity;
-                    
-                    // Re-render tables
-                    renderStockTable();
-                    renderAdjustTable();
-                    
-                    // Refresh dashboard counts
-                    const lowStockIngredients = ingredientsList.filter(ingredient => 
-                        ingredient.stock_minimo !== null && 
-                        ingredient.cantidad_actual <= ingredient.stock_minimo
-                    );
-                    lowStockCount.textContent = lowStockIngredients.length;
-                    
-                    // Close modal
-                    closeModal();
-                    
-                    // Show success message
-                    alert('Inventario ajustado correctamente');
-                } else {
-                    alert('Error al ajustar el inventario: ' + (data.error || 'Error desconocido'));
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status}`);
                 }
+                return response.json();
+            })
+            .then(data => {
+                // Update local data regardless of response format
+                if (data.id) {
+                    // If response has ingredient data directly
+                    Object.assign(ingredient, data);
+                } else if (data.success && data.data) {
+                    // If response has data wrapped in success and data fields
+                    Object.assign(ingredient, data.data);
+                } else {
+                    // Fallback - just update the quantity in our local data
+                    ingredient.cantidad_actual = newQuantity;
+                }
+                
+                // Try to create adjustment record in the log
+                try {
+                    fetch('/api/ajustes', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            ingrediente_id: id,
+                            cantidad_ajustada: type === 'add' ? quantity : (type === 'subtract' ? -quantity : (newQuantity - ingredient.cantidad_actual)),
+                            motivo: `${adjustmentDescription}. ${reason}`
+                        })
+                    }).catch(error => {
+                        console.warn('Failed to log adjustment:', error);
+                    });
+                } catch (error) {
+                    console.warn('Ajuste log endpoint might not exist:', error);
+                }
+                
+                // Re-render tables
+                renderStockTable();
+                renderAdjustTable();
+                
+                // Refresh dashboard counts
+                const lowStockIngredients = ingredientsList.filter(ingredient => 
+                    ingredient.stock_minimo !== null && 
+                    ingredient.cantidad_actual <= ingredient.stock_minimo
+                );
+                lowStockCount.textContent = lowStockIngredients.length;
+                
+                // Close modal
+                closeModal();
+                
+                // Show success message
+                alert('Inventario ajustado correctamente');
             })
             .catch(error => {
                 console.error('Error updating ingredient:', error);
-                alert('Error al comunicarse con el servidor');
+                alert('Error al actualizar el inventario: ' + error.message);
             });
         }
     });
