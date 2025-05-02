@@ -103,4 +103,67 @@ def validate_string(value, min_length=1, max_length=None):
     if max_length is not None and length > max_length:
         return False
         
-    return True 
+    return True
+
+def validate_required_fields(data, required_fields):
+    """
+    Validate that the data contains all required fields.
+    
+    Args:
+        data (dict): The data to validate
+        required_fields (list): List of required field names
+        
+    Returns:
+        dict: Validation result with 'valid' flag and 'error' message if invalid
+    """
+    if not data:
+        return {'valid': False, 'error': 'No data provided'}
+    
+    missing_fields = []
+    for field in required_fields:
+        if field not in data or data[field] is None or data[field] == '':
+            missing_fields.append(field)
+    
+    if missing_fields:
+        return {
+            'valid': False, 
+            'error': f'Missing required fields: {", ".join(missing_fields)}'
+        }
+    
+    return {'valid': True}
+
+def validate_numeric_value(data, field_name, expected_type='float', error_message=None):
+    """
+    Validate that a field in the data is a numeric value of the expected type.
+    
+    Args:
+        data (dict): The data containing the field
+        field_name (str): The name of the field to validate
+        expected_type (str): The expected numeric type ('int' or 'float')
+        error_message (str, optional): Custom error message
+        
+    Returns:
+        dict: Validation result with 'valid' flag and 'error' message if invalid
+    """
+    if field_name not in data:
+        return {'valid': True}  # Skip validation if field is not present
+    
+    value = data[field_name]
+    
+    if value is None or value == '':
+        return {'valid': True}  # Skip validation if field is empty
+    
+    try:
+        if expected_type == 'int':
+            int(value)
+        else:  # float
+            float(value)
+        return {'valid': True}
+    except (ValueError, TypeError):
+        if error_message:
+            return {'valid': False, 'error': error_message}
+        else:
+            return {
+                'valid': False, 
+                'error': f'Field "{field_name}" must be a valid {expected_type}'
+            } 

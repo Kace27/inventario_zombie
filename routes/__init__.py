@@ -1,4 +1,2 @@
 # Routes package initialization
-from .ingredientes import ingredientes_bp
-from .articulos import articulos_bp
-from .composicion import composicion_bp 
+# Empty __init__.py file to mark the directory as a Python package 

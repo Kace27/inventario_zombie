@@ -34,4 +34,22 @@ class ErrorHandler:
         def handle_exception(e):
             # Log the exception
             app.logger.error(f"Unhandled exception: {str(e)}")
-            return jsonify({'error': 'Unexpected error', 'message': str(e)}), 500 
+            return jsonify({'error': 'Unexpected error', 'message': str(e)}), 500
+
+def handle_error(error_message, status_code=500):
+    """
+    Generic error handler to use in route functions.
+    
+    Args:
+        error_message (str): The error message
+        status_code (int): HTTP status code (default: 500)
+    
+    Returns:
+        Flask response with JSON error message and status code
+    """
+    from flask import current_app
+    current_app.logger.error(f"API Error: {error_message}")
+    return jsonify({
+        "success": False,
+        "error": error_message
+    }), status_code 

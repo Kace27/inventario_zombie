@@ -1,0 +1,3 @@
+fecha,hora,ticket,empleado,mesa,comensales,articulo,categoria,subcategoria,precio_unitario,articulos_vendidos,iva,propina,total
+2025-05-02,00:02:29,T-001,Test Employee,Table 1,2,Test Product,Test Category,Test Subcategory,10.50,2,1.68,2.10,24.78
+2025-05-02,00:02:29,T-002,Test Employee,Table 2,4,Another Product,Test Category,Test Subcategory,8.75,4,2.80,3.50,41.30

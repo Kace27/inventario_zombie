@@ -46,23 +46,23 @@ def options_handler(path):
 def index():
     return render_template('index.html')
 
-# Register blueprints for different API modules
-from routes.ingredientes import ingredientes_bp
-from routes.articulos import articulos_bp
-from routes.composicion import composicion_bp
-
-# Register blueprints for web UI
-from routes.ingredientes import ingredientes_web_bp
-from routes.articulos import articulos_web_bp
+# Import API routes
+import routes.ingredientes
+import routes.articulos
+import routes.composicion
+import routes.ventas
+import routes.recepciones
 
 # Register API blueprints
-app.register_blueprint(ingredientes_bp)
-app.register_blueprint(articulos_bp)
-app.register_blueprint(composicion_bp)
+app.register_blueprint(routes.ingredientes.ingredientes_bp)
+app.register_blueprint(routes.articulos.articulos_bp)
+app.register_blueprint(routes.composicion.composicion_bp)
+app.register_blueprint(routes.ventas.bp)
+app.register_blueprint(routes.recepciones.bp)
 
 # Register web UI blueprints
-app.register_blueprint(ingredientes_web_bp)
-app.register_blueprint(articulos_web_bp)
+app.register_blueprint(routes.ingredientes.ingredientes_web_bp)
+app.register_blueprint(routes.articulos.articulos_web_bp)
 
 if __name__ == '__main__':
     # Ensure the database is initialized
