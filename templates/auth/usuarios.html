@@ -1,0 +1,198 @@
+{% extends "layout.html" %}
+
+{% block title %}Gestión de Usuarios - Inventario Zombie{% endblock %}
+
+{% block head %}
+<style>
+    .users-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .users-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+    
+    .btn-new {
+        background-color: #28a745;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        transition: background-color 0.3s;
+    }
+    
+    .btn-new i {
+        margin-right: 0.5rem;
+    }
+    
+    .btn-new:hover {
+        background-color: #218838;
+    }
+    
+    .users-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 2rem;
+    }
+    
+    .users-table th,
+    .users-table td {
+        padding: 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .users-table th {
+        background-color: #f8f9fa;
+        font-weight: bold;
+    }
+    
+    .users-table tr:hover {
+        background-color: #f1f1f1;
+    }
+    
+    .badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.875rem;
+    }
+    
+    .badge-admin {
+        background-color: #007bff;
+        color: white;
+    }
+    
+    .badge-cocina {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    .badge-inactive {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    .actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .btn-edit,
+    .btn-reset {
+        padding: 0.375rem 0.75rem;
+        border-radius: 4px;
+        text-decoration: none;
+        color: white;
+        font-size: 0.875rem;
+        cursor: pointer;
+        border: none;
+    }
+    
+    .btn-edit {
+        background-color: #ffc107;
+    }
+    
+    .btn-reset {
+        background-color: #6c757d;
+    }
+    
+    .btn-edit:hover {
+        background-color: #e0a800;
+    }
+    
+    .btn-reset:hover {
+        background-color: #5a6268;
+    }
+    
+    .login-attempts {
+        text-align: center;
+    }
+    
+    .alert-warning {
+        color: #856404;
+        background-color: #fff3cd;
+        border-color: #ffeeba;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.875rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="users-container">
+    <div class="users-header">
+        <h2>Gestión de Usuarios</h2>
+        <a href="{{ url_for('auth.nuevo_usuario') }}" class="btn-new">
+            <i class="fas fa-user-plus"></i> Nuevo Usuario
+        </a>
+    </div>
+    
+    <table class="users-table">
+        <thead>
+            <tr>
+                <th>Usuario</th>
+                <th>Rol</th>
+                <th>Estado</th>
+                <th>Último Acceso</th>
+                <th>Intentos Fallidos</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for usuario in usuarios %}
+            <tr>
+                <td>{{ usuario.nombre }}</td>
+                <td>
+                    {% if usuario.rol == 'admin' %}
+                    <span class="badge badge-admin">Administrador</span>
+                    {% else %}
+                    <span class="badge badge-cocina">Cocina</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if usuario.activo %}
+                    <span class="badge" style="background-color: #28a745; color: white;">Activo</span>
+                    {% else %}
+                    <span class="badge badge-inactive">Inactivo</span>
+                    {% endif %}
+                </td>
+                <td>{{ usuario.ultimo_acceso if usuario.ultimo_acceso else 'Nunca' }}</td>
+                <td class="login-attempts">
+                    {% if usuario.intentos_fallidos > 0 %}
+                    <span class="alert-warning">{{ usuario.intentos_fallidos }}</span>
+                    {% else %}
+                    0
+                    {% endif %}
+                </td>
+                <td class="actions">
+                    <a href="{{ url_for('auth.editar_usuario', id=usuario.id) }}" class="btn-edit">
+                        <i class="fas fa-edit"></i> Editar
+                    </a>
+                    {% if usuario.intentos_fallidos > 0 %}
+                    <form method="POST" action="{{ url_for('auth.reset_intentos', id=usuario.id) }}" style="display: inline;">
+                        <button type="submit" class="btn-reset">
+                            <i class="fas fa-redo"></i> Reset
+                        </button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            
+            {% if not usuarios %}
+            <tr>
+                <td colspan="6" style="text-align: center;">No hay usuarios registrados.</td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %} 

@@ -1,0 +1,209 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    {% if accion == 'nuevo' %}
+    Nuevo Usuario - Inventario Zombie
+    {% else %}
+    Editar Usuario - Inventario Zombie
+    {% endif %}
+{% endblock %}
+
+{% block head %}
+<style>
+    .user-form-container {
+        max-width: 600px;
+        margin: 2rem auto;
+        padding: 2rem;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .form-header {
+        margin-bottom: 2rem;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: bold;
+    }
+    
+    input[type="text"],
+    input[type="password"],
+    input[type="number"],
+    select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        font-size: 1rem;
+        transition: border-color 0.15s;
+    }
+    
+    input[type="text"]:focus,
+    input[type="password"]:focus,
+    input[type="number"]:focus,
+    select:focus {
+        border-color: #80bdff;
+        outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+    }
+    
+    .checkbox-group {
+        display: flex;
+        align-items: center;
+    }
+    
+    .checkbox-group input {
+        margin-right: 0.5rem;
+    }
+    
+    .form-actions {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 2rem;
+    }
+    
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 4px;
+        font-size: 1rem;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+        transition: background-color 0.3s;
+    }
+    
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+        border: none;
+    }
+    
+    .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+        border: none;
+    }
+    
+    .btn-primary:hover {
+        background-color: #0069d9;
+    }
+    
+    .btn-secondary:hover {
+        background-color: #5a6268;
+    }
+    
+    .field-info {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    
+    .role-specific {
+        display: none;
+        padding: 1rem;
+        margin-top: 1rem;
+        background-color: #e9ecef;
+        border-radius: 4px;
+    }
+    
+    .role-specific.active {
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="user-form-container">
+    <div class="form-header">
+        <h2>
+            {% if accion == 'nuevo' %}
+            Crear Nuevo Usuario
+            {% else %}
+            Editar Usuario: {{ usuario.nombre }}
+            {% endif %}
+        </h2>
+    </div>
+    
+    <form method="post">
+        <div class="form-group">
+            <label for="nombre">Nombre de Usuario</label>
+            <input type="text" id="nombre" name="nombre" 
+                   value="{{ usuario.nombre if usuario else '' }}"
+                   {% if accion == 'editar' %}readonly{% else %}required{% endif %}>
+            <div class="field-info">Solo letras, números y guiones bajos.</div>
+        </div>
+        
+        <div class="form-group">
+            <label for="password">
+                {% if accion == 'nuevo' %}
+                Contraseña
+                {% else %}
+                Nueva Contraseña (dejar en blanco para mantener la actual)
+                {% endif %}
+            </label>
+            <input type="password" id="password" name="password" 
+                   {% if accion == 'nuevo' %}required{% endif %}>
+            <div class="field-info">Mínimo 6 caracteres.</div>
+        </div>
+        
+        <div class="form-group">
+            <label for="rol">Rol</label>
+            <select id="rol" name="rol" required>
+                <option value="admin" {% if usuario and usuario.rol == 'admin' %}selected{% endif %}>Administrador</option>
+                <option value="cocina" {% if usuario and usuario.rol == 'cocina' %}selected{% endif %}>Cocina</option>
+            </select>
+        </div>
+        
+        <div id="role-cocina" class="role-specific {% if usuario and usuario.rol == 'cocina' %}active{% endif %}">
+            <div class="form-group">
+                <label for="pin">PIN (4 dígitos)</label>
+                <input type="number" id="pin" name="pin" maxlength="4" pattern="[0-9]{4}"
+                       value="{{ usuario.pin if usuario and usuario.pin else '' }}">
+                <div class="field-info">PIN numérico de 4 dígitos para acceso rápido (solo usuarios de cocina).</div>
+            </div>
+        </div>
+        
+        {% if accion == 'editar' %}
+        <div class="form-group checkbox-group">
+            <input type="checkbox" id="activo" name="activo" 
+                   {% if usuario and usuario.activo %}checked{% endif %}>
+            <label for="activo">Usuario Activo</label>
+        </div>
+        {% endif %}
+        
+        <div class="form-actions">
+            <a href="{{ url_for('auth.lista_usuarios') }}" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary">
+                {% if accion == 'nuevo' %}
+                Crear Usuario
+                {% else %}
+                Guardar Cambios
+                {% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Show/hide role-specific fields based on selected role
+    const rolSelect = document.getElementById('rol');
+    const roleCocinaFields = document.getElementById('role-cocina');
+    
+    rolSelect.addEventListener('change', function() {
+        if (this.value === 'cocina') {
+            roleCocinaFields.classList.add('active');
+        } else {
+            roleCocinaFields.classList.remove('active');
+        }
+    });
+</script>
+{% endblock %} 

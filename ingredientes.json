@@ -1,0 +1,732 @@
+[
+  {
+    "name": "Escencia Vainilla",
+    "quantity": 0.98,
+    "minimum_stock": 10,
+    "_id": "0H5JVoS5ODF2XmcOBl9a",
+    "category": "Fuente de Sodas",
+    "id": "0H5JVoS5ODF2XmcOBl9a"
+  },
+  {
+    "name": "Lechuga",
+    "last_updated": "2025-02-28 06:20:14.896000+00:00",
+    "quantity": 4,
+    "minimum_stock": 10,
+    "_id": "0ZPF9l7WS9QcmRQx9A8r",
+    "category": "Verdura",
+    "id": "0ZPF9l7WS9QcmRQx9A8r"
+  },
+  {
+    "name": "Salsa Tamarindo",
+    "quantity": 600,
+    "minimum_stock": 10,
+    "_id": "0kITPMfP79y3vF8XpUrK",
+    "category": "Salsas",
+    "id": "0kITPMfP79y3vF8XpUrK"
+  },
+  {
+    "name": "Escencia Algodon",
+    "quantity": 2400,
+    "minimum_stock": 10,
+    "_id": "0zp2601KG3Yu1YelR4Vr",
+    "category": "Fuente de Sodas",
+    "id": "0zp2601KG3Yu1YelR4Vr"
+  },
+  {
+    "name": "Salsa Mango",
+    "quantity": 0,
+    "minimum_stock": 10,
+    "_id": "15tJcD2NpsxGuMDmL46b",
+    "category": "Salsas",
+    "id": "15tJcD2NpsxGuMDmL46b"
+  },
+  {
+    "name": "Papas Gajo",
+    "last_updated": "2025-02-28 06:19:42.651000+00:00",
+    "quantity": 4.5600000000000005,
+    "minimum_stock": 10,
+    "_id": "1MMT6tTLM8CAYOVJrWDq",
+    "category": "Principales",
+    "id": "1MMT6tTLM8CAYOVJrWDq"
+  },
+  {
+    "name": "Salsa Agridulce",
+    "last_updated": "2025-02-26 00:59:22.859000+00:00",
+    "quantity": 1500,
+    "minimum_stock": 10,
+    "_id": "1NKYO8w8D9h7luBnu2TT",
+    "category": "Salsas",
+    "id": "1NKYO8w8D9h7luBnu2TT"
+  },
+  {
+    "name": "7Up Lata",
+    "quantity": 9,
+    "minimum_stock": 10,
+    "_id": "1k6tHi6acI7vZ6WSRlXg",
+    "category": "Bebidas",
+    "id": "1k6tHi6acI7vZ6WSRlXg"
+  },
+  {
+    "name": "Plato carton",
+    "quantity": 8,
+    "minimum_stock": 10,
+    "_id": "2ACfTbFHKMTETxnw0TK4",
+    "category": "Empaques",
+    "id": "2ACfTbFHKMTETxnw0TK4"
+  },
+  {
+    "name": "Salsa BBQ",
+    "quantity": 3,
+    "minimum_stock": 10,
+    "_id": "2S2Pqo8jxOdlmpqZKlkq",
+    "category": "Salsas",
+    "id": "2S2Pqo8jxOdlmpqZKlkq"
+  },
+  {
+    "name": "Pepsi Lata",
+    "last_updated": "2025-02-26 21:17:21.934000+00:00",
+    "quantity": 18,
+    "minimum_stock": 10,
+    "_id": "2sLUhmiV1k8gQcC92apG",
+    "category": "Bebidas",
+    "id": "2sLUhmiV1k8gQcC92apG"
+  },
+  {
+    "name": "Queso Hamb",
+    "last_updated": "2025-02-28 06:19:58.211000+00:00",
+    "quantity": 450,
+    "minimum_stock": 10,
+    "_id": "2x6bOuOy86Kct5zsmq6m",
+    "category": "Principales",
+    "id": "2x6bOuOy86Kct5zsmq6m"
+  },
+  {
+    "name": "Vaso Buba",
+    "quantity": 10,
+    "minimum_stock": 10,
+    "_id": "4FEtn5pS7dONO0aqRF1o",
+    "category": "Empaques",
+    "id": "4FEtn5pS7dONO0aqRF1o"
+  },
+  {
+    "name": "Refill Naranja",
+    "last_updated": "2025-02-28 06:20:11.473000+00:00",
+    "quantity": 0,
+    "minimum_stock": 10,
+    "_id": "4hhHfoBRwI2CQOKnSohq",
+    "category": "Bebidas",
+    "id": "4hhHfoBRwI2CQOKnSohq"
+  },
+  {
+    "name": "Leche",
+    "last_updated": "2025-02-28 06:20:07.481000+00:00",
+    "quantity": 7,
+    "minimum_stock": 10,
+    "_id": "4vt1D5RqjvCWi6HAi0bs",
+    "category": "Fuente de Sodas",
+    "id": "4vt1D5RqjvCWi6HAi0bs"
+  },
+  {
+    "name": "Caja papa",
+    "quantity": 100,
+    "minimum_stock": 10,
+    "_id": "64qLBRMHiJ6aj1BQCQ7X",
+    "category": "Empaques",
+    "id": "64qLBRMHiJ6aj1BQCQ7X"
+  },
+  {
+    "name": "Crema Batida",
+    "last_updated": "2025-02-23 23:01:14.500000+00:00",
+    "quantity": 3,
+    "minimum_stock": 10,
+    "_id": "6cmkXD0P0zsXGuQNkKaw",
+    "category": "Fuente de Sodas",
+    "id": "6cmkXD0P0zsXGuQNkKaw"
+  },
+  {
+    "name": "Conos carton",
+    "last_updated": "2025-02-28 06:20:14.216000+00:00",
+    "quantity": 60,
+    "minimum_stock": 10,
+    "_id": "7UMDzDlZg1bq9XvbxFl6",
+    "category": "Empaques",
+    "id": "7UMDzDlZg1bq9XvbxFl6"
+  },
+  {
+    "name": "Aderezo Zombie",
+    "quantity": 2.58,
+    "minimum_stock": 10,
+    "_id": "89CyU6t7JkpeeZebbdA8",
+    "category": "Salsas",
+    "id": "89CyU6t7JkpeeZebbdA8"
+  },
+  {
+    "name": "Papel Baño",
+    "quantity": 6,
+    "minimum_stock": 10,
+    "_id": "8GHE5Q5GTNxwkENsaTnl",
+    "category": "Servicio",
+    "id": "8GHE5Q5GTNxwkENsaTnl"
+  },
+  {
+    "name": "Negra Modelo",
+    "last_updated": "2025-02-28 06:19:50.970000+00:00",
+    "quantity": 0,
+    "minimum_stock": 10,
+    "_id": "95Pqg2BAAzHABLyq8NzH",
+    "category": "Bebidas",
+    "id": "95Pqg2BAAzHABLyq8NzH"
+  },
+  {
+    "name": "Alitas",
+    "last_updated": "2025-02-28 06:20:09.073000+00:00",
+    "quantity": 10.8,
+    "minimum_stock": 10,
+    "_id": "9B7yYZj8MvvVaLJXUN9O",
+    "category": "Principales",
+    "id": "9B7yYZj8MvvVaLJXUN9O"
+  },
+  {
+    "name": "Azucar",
+    "quantity": 7.5,
+    "minimum_stock": 10,
+    "_id": "BON4vt0hdYg2Z7ElNvLL",
+    "category": "Fuente de Sodas",
+    "id": "BON4vt0hdYg2Z7ElNvLL"
+  },
+  {
+    "name": "Jamón",
+    "last_updated": "2025-02-23 23:01:12.204000+00:00",
+    "quantity": 0,
+    "minimum_stock": 10,
+    "_id": "BgKlMksMP9H6hjpw4tbG",
+    "category": "Principales",
+    "id": "BgKlMksMP9H6hjpw4tbG"
+  },
+  {
+    "name": "Jabon Trastes",
+    "quantity": 1000,
+    "minimum_stock": 10,
+    "_id": "C1TWACm2KV0RQq39qDHf",
+    "category": "Servicio",
+    "id": "C1TWACm2KV0RQq39qDHf"
+  },
+  {
+    "name": "Banderillas",
+    "last_updated": "2025-02-28 06:19:54.749000+00:00",
+    "quantity": 36,
+    "minimum_stock": 10,
+    "_id": "D7fFOPbFNy3TRnxH6DRx",
+    "category": "Principales",
+    "id": "D7fFOPbFNy3TRnxH6DRx"
+  },
+  {
+    "name": "Frutsi",
+    "last_updated": "2025-02-28 06:19:45.809000+00:00",
+    "quantity": 39,
+    "minimum_stock": 10,
+    "_id": "DaVY2038zy6dJ4YLOPL8",
+    "category": "Bebidas",
+    "id": "DaVY2038zy6dJ4YLOPL8"
+  },
+  {
+    "name": "Pizzas",
+    "last_updated": "2025-02-28 06:20:06.704000+00:00",
+    "quantity": 48,
+    "minimum_stock": 10,
+    "_id": "Dj5ILOFiY9p0xuOJxkLN",
+    "category": "Principales",
+    "id": "Dj5ILOFiY9p0xuOJxkLN"
+  },
+  {
+    "name": "Modelo Especial",
+    "last_updated": "2025-02-28 06:19:02.702000+00:00",
+    "quantity": 12,
+    "minimum_stock": 10,
+    "_id": "FkVO6xyNXAwOxFS97mPW",
+    "category": "Bebidas",
+    "id": "FkVO6xyNXAwOxFS97mPW"
+  },
+  {
+    "name": "Catsup",
+    "quantity": 8.76,
+    "minimum_stock": 10,
+    "_id": "H37SvrOoogVVv762u6tr",
+    "category": "Salsas",
+    "id": "H37SvrOoogVVv762u6tr"
+  },
+  {
+    "name": "Aderezos",
+    "quantity": 18,
+    "minimum_stock": 10,
+    "_id": "HPIseMCZXwvIZrA410mm",
+    "category": "Salsas",
+    "id": "HPIseMCZXwvIZrA410mm"
+  },
+  {
+    "name": "Ramen",
+    "last_updated": "2025-02-28 06:19:42.244000+00:00",
+    "quantity": 12,
+    "minimum_stock": 10,
+    "_id": "ItsG6UYXfgzowCwbQdZ0",
+    "category": "Principales",
+    "id": "ItsG6UYXfgzowCwbQdZ0"
+  },
+  {
+    "name": "Jitomate",
+    "last_updated": "2025-02-28 06:19:56.860000+00:00",
+    "quantity": 3,
+    "minimum_stock": 10,
+    "_id": "J2mXC62NANsm7FdBfoSX",
+    "category": "Verdura",
+    "id": "J2mXC62NANsm7FdBfoSX"
+  },
+  {
+    "name": "Mayonesa",
+    "last_updated": "2025-02-23 23:01:13.211000+00:00",
+    "quantity": 0,
+    "minimum_stock": 10,
+    "_id": "JQJ2xc1R2boAla4Y9kwJ",
+    "category": "Salsas",
+    "id": "JQJ2xc1R2boAla4Y9kwJ"
+  },
+  {
+    "name": "Papel Impreso Hamb",
+    "quantity": 100,
+    "minimum_stock": 10,
+    "_id": "JbNjdxY7O9Mjp3hLyIFb",
+    "category": "Empaques",
+    "id": "JbNjdxY7O9Mjp3hLyIFb"
+  },
+  {
+    "name": "Helado Chocolate",
+    "last_updated": "2025-02-28 06:20:07.134000+00:00",
+    "quantity": 3,
+    "minimum_stock": 10,
+    "_id": "LoOIjoeUeNmDBrsUfBOV",
+    "category": "Fuente de Sodas",
+    "id": "LoOIjoeUeNmDBrsUfBOV"
+  },
+  {
+    "name": "Costillas",
+    "last_updated": "2025-02-28 06:20:14.550000+00:00",
+    "quantity": 15,
+    "minimum_stock": 10,
+    "_id": "Mem1T5ohh7E7sjRVHkzh",
+    "category": "Principales",
+    "id": "Mem1T5ohh7E7sjRVHkzh"
+  },
+  {
+    "name": "Vaso Flotante",
+    "quantity": 4,
+    "minimum_stock": 10,
+    "_id": "N6vg8G01cHGUBWlwRRYd",
+    "category": "Empaques",
+    "id": "N6vg8G01cHGUBWlwRRYd"
+  },
+  {
+    "name": "Sal Papas",
+    "quantity": 250,
+    "minimum_stock": 10,
+    "_id": "NolhcDZDH6SNhUJk53gx",
+    "category": "Principales",
+    "id": "NolhcDZDH6SNhUJk53gx"
+  },
+  {
+    "name": "Sanitas",
+    "quantity": 4,
+    "minimum_stock": 10,
+    "_id": "ObP75fIbGXxZgYvg9B7p",
+    "category": "Servicio",
+    "id": "ObP75fIbGXxZgYvg9B7p"
+  },
+  {
+    "name": "Escencia Chicle",
+    "quantity": 210,
+    "minimum_stock": 10,
+    "_id": "RMCZmKHEvj27qGIvsYVf",
+    "category": "Fuente de Sodas",
+    "id": "RMCZmKHEvj27qGIvsYVf"
+  },
+  {
+    "name": "Helado Fresa",
+    "last_updated": "2025-02-26 21:17:04.325000+00:00",
+    "quantity": 3,
+    "minimum_stock": 10,
+    "_id": "SGHFoWiviHDKKnQJWMDw",
+    "category": "Fuente de Sodas",
+    "id": "SGHFoWiviHDKKnQJWMDw"
+  },
+  {
+    "name": "Aluminio",
+    "quantity": 2,
+    "minimum_stock": 10,
+    "_id": "SwvRx4VRsN3MpUBfnGus",
+    "category": "Empaques",
+    "id": "SwvRx4VRsN3MpUBfnGus"
+  },
+  {
+    "name": "Salsa Búfalo",
+    "quantity": 0,
+    "minimum_stock": 10,
+    "_id": "TsfxeG5Ax6QBJ85d1fB6",
+    "category": "Salsas",
+    "id": "TsfxeG5Ax6QBJ85d1fB6"
+  },
+  {
+    "name": "Ranch",
+    "quantity": 5.4,
+    "minimum_stock": 10,
+    "_id": "U3wCAC27uVgEfPOQQYi1",
+    "category": "Salsas",
+    "id": "U3wCAC27uVgEfPOQQYi1"
+  },
+  {
+    "name": "Salsa Zombie",
+    "quantity": 1500,
+    "minimum_stock": 10,
+    "_id": "UEROvMQTYp1buK2jYUeY",
+    "category": "Salsas",
+    "id": "UEROvMQTYp1buK2jYUeY"
+  },
+  {
+    "name": "Pan Hamb Gd",
+    "last_updated": "2025-02-28 06:19:57.549000+00:00",
+    "quantity": 108,
+    "minimum_stock": 10,
+    "_id": "UNmGkxTPuEgeWTbhO4Dk",
+    "category": "Principales",
+    "id": "UNmGkxTPuEgeWTbhO4Dk"
+  },
+  {
+    "name": "Pepinillos",
+    "last_updated": "2025-02-28 06:19:57.871000+00:00",
+    "quantity": 9,
+    "minimum_stock": 10,
+    "_id": "UlniXn184nxDXEqZLLHw",
+    "category": "Verdura",
+    "id": "UlniXn184nxDXEqZLLHw"
+  },
+  {
+    "name": "Aceite",
+    "quantity": 0,
+    "minimum_stock": 10,
+    "_id": "VqnCnGpa6Ld6e4AcfdTP",
+    "category": "Principales",
+    "id": "VqnCnGpa6Ld6e4AcfdTP"
+  },
+  {
+    "name": "Papel Encerado",
+    "last_updated": "2025-02-26 00:59:22.589000+00:00",
+    "quantity": 2,
+    "minimum_stock": 10,
+    "_id": "XdOgxeX8cEDmt9vrPkQd",
+    "category": "Empaques",
+    "id": "XdOgxeX8cEDmt9vrPkQd"
+  },
+  {
+    "name": "Mirinda Lata",
+    "last_updated": "2025-02-26 21:17:09.800000+00:00",
+    "quantity": 30,
+    "minimum_stock": 10,
+    "_id": "Y0dG4A0Q2epSgpHv60KW",
+    "category": "Bebidas",
+    "id": "Y0dG4A0Q2epSgpHv60KW"
+  },
+  {
+    "name": "Helado Vainilla",
+    "last_updated": "2025-02-28 06:19:24.023000+00:00",
+    "quantity": 3,
+    "minimum_stock": 10,
+    "_id": "YiWkv1G85M0LMWqS3SRF",
+    "category": "Fuente de Sodas",
+    "id": "YiWkv1G85M0LMWqS3SRF"
+  },
+  {
+    "name": "Pan Hamb Ch",
+    "quantity": 6,
+    "minimum_stock": 10,
+    "_id": "Yr3tp0ksED1fmcFEvh7q",
+    "category": "Principales",
+    "id": "Yr3tp0ksED1fmcFEvh7q"
+  },
+  {
+    "name": "Rollos Impresora",
+    "quantity": 20,
+    "minimum_stock": 10,
+    "_id": "YtmMvTF2WvhpnuRizYVo",
+    "category": "Servicio",
+    "id": "YtmMvTF2WvhpnuRizYVo"
+  },
+  {
+    "name": "Cebolla",
+    "last_updated": "2025-02-28 06:19:56.560000+00:00",
+    "quantity": 3,
+    "minimum_stock": 10,
+    "_id": "ZBCfbhAZdlmpMI1T52Pu",
+    "category": "Verdura",
+    "id": "ZBCfbhAZdlmpMI1T52Pu"
+  },
+  {
+    "name": "Yakult",
+    "last_updated": "2025-02-26 21:17:03.199000+00:00",
+    "quantity": 0,
+    "minimum_stock": 10,
+    "_id": "ZUNpDYN8n0W7HKYLhgjA",
+    "category": "Bebidas",
+    "id": "ZUNpDYN8n0W7HKYLhgjA"
+  },
+  {
+    "name": "Chiles en vinagre",
+    "quantity": 3.94,
+    "minimum_stock": 10,
+    "_id": "aB5uyEVe4yfv3xxPK5IC",
+    "category": "Salsas",
+    "id": "aB5uyEVe4yfv3xxPK5IC"
+  },
+  {
+    "name": "Bolsas basura",
+    "quantity": 6,
+    "minimum_stock": 10,
+    "_id": "bJPmJTCCprEdAWN9Ralx",
+    "category": "Servicio",
+    "id": "bJPmJTCCprEdAWN9Ralx"
+  },
+  {
+    "name": "Chipotle",
+    "quantity": 1.6500000000000001,
+    "minimum_stock": 10,
+    "_id": "bZaMSlohx7quZECmkpYx",
+    "category": "Salsas",
+    "id": "bZaMSlohx7quZECmkpYx"
+  },
+  {
+    "name": "Tocino",
+    "quantity": 0,
+    "minimum_stock": 10,
+    "_id": "cSh0UF5f0xCupB8vV46I",
+    "category": "Principales",
+    "id": "cSh0UF5f0xCupB8vV46I"
+  },
+  {
+    "name": "Vaso de Vidrio",
+    "quantity": 90,
+    "minimum_stock": 10,
+    "_id": "dUVJgGmOADcKmCDL9PMN",
+    "category": "Empaques",
+    "id": "dUVJgGmOADcKmCDL9PMN"
+  },
+  {
+    "name": "Leche Deslactosada",
+    "quantity": 1,
+    "minimum_stock": 10,
+    "_id": "eO7ruGZrj3dMM6T1CUkb",
+    "category": "Fuente de Sodas",
+    "id": "eO7ruGZrj3dMM6T1CUkb"
+  },
+  {
+    "name": "Fabuloso",
+    "quantity": 2,
+    "minimum_stock": 10,
+    "_id": "fSWkJN5E8pQGyH7NrP45",
+    "category": "Servicio",
+    "id": "fSWkJN5E8pQGyH7NrP45"
+  },
+  {
+    "name": "Vasos malteada",
+    "last_updated": "2025-02-23 23:50:21.430000+00:00",
+    "quantity": 28,
+    "minimum_stock": 10,
+    "_id": "gtNvCkVfVWBUJES8Q8i2",
+    "category": "Empaques",
+    "id": "gtNvCkVfVWBUJES8Q8i2"
+  },
+  {
+    "name": "Manzanita Lata",
+    "quantity": 0,
+    "minimum_stock": 10,
+    "_id": "i3IadOBlzcFHvLt4t5c3",
+    "category": "Bebidas",
+    "id": "i3IadOBlzcFHvLt4t5c3"
+  },
+  {
+    "name": "Block Notas",
+    "quantity": 12,
+    "minimum_stock": 10,
+    "_id": "ilmYKUw8Z00mNOoTBqpM",
+    "category": "Servicio",
+    "id": "ilmYKUw8Z00mNOoTBqpM"
+  },
+  {
+    "name": "Carne Hamb",
+    "last_updated": "2025-02-28 06:19:59.562000+00:00",
+    "quantity": 12,
+    "minimum_stock": 10,
+    "_id": "kM9f7wJw4Tj2gKYQII0L",
+    "category": "Principales",
+    "id": "kM9f7wJw4Tj2gKYQII0L"
+  },
+  {
+    "name": "Balas CO2",
+    "quantity": 6,
+    "minimum_stock": 10,
+    "_id": "lOElUjwyvwHE133lNNCt",
+    "category": "Fuente de Sodas",
+    "id": "lOElUjwyvwHE133lNNCt"
+  },
+  {
+    "name": "Valentina",
+    "quantity": 13.440000000000001,
+    "minimum_stock": 10,
+    "_id": "nJBoUPKxCqhYE158JazT",
+    "category": "Salsas",
+    "id": "nJBoUPKxCqhYE158JazT"
+  },
+  {
+    "name": "Refill Cola",
+    "last_updated": "2025-02-28 06:20:03.060000+00:00",
+    "quantity": 9,
+    "minimum_stock": 10,
+    "_id": "nZsJEfv5LqPAPLp4xHPJ",
+    "category": "Bebidas",
+    "id": "nZsJEfv5LqPAPLp4xHPJ"
+  },
+  {
+    "name": "Arizona",
+    "last_updated": "2025-02-28 06:19:55.161000+00:00",
+    "quantity": 0,
+    "minimum_stock": 10,
+    "_id": "oC4eNtjxWEgdWIlSTvzU",
+    "category": "Bebidas",
+    "id": "oC4eNtjxWEgdWIlSTvzU"
+  },
+  {
+    "name": "Escencia Menta",
+    "quantity": 180,
+    "minimum_stock": 10,
+    "_id": "oV9Jnflu8BINI8FpHlul",
+    "category": "Fuente de Sodas",
+    "id": "oV9Jnflu8BINI8FpHlul"
+  },
+  {
+    "name": "Papas Francesa",
+    "last_updated": "2025-02-28 06:20:15.237000+00:00",
+    "quantity": 45,
+    "minimum_stock": 10,
+    "_id": "q1rsALNSN3IkM5omVW6w",
+    "category": "Principales",
+    "id": "q1rsALNSN3IkM5omVW6w"
+  },
+  {
+    "name": "Queso Liquido",
+    "quantity": 300,
+    "minimum_stock": 10,
+    "_id": "qD82KDLpywdcBayAA3XY",
+    "category": "Salsas",
+    "id": "qD82KDLpywdcBayAA3XY"
+  },
+  {
+    "name": "Gomitas Cerebros",
+    "last_updated": "2025-02-23 23:01:14.752000+00:00",
+    "quantity": 45,
+    "minimum_stock": 10,
+    "_id": "qQ3LJERAESzzYtwW6Dvs",
+    "category": "Fuente de Sodas",
+    "id": "qQ3LJERAESzzYtwW6Dvs"
+  },
+  {
+    "name": "Bolsa Asa",
+    "quantity": 0,
+    "minimum_stock": 10,
+    "_id": "qTKRNmGnKmKunPCIpkVp",
+    "category": "Empaques",
+    "id": "qTKRNmGnKmKunPCIpkVp"
+  },
+  {
+    "name": "Refill Limon",
+    "last_updated": "2025-02-28 06:20:11.008000+00:00",
+    "quantity": 15,
+    "minimum_stock": 10,
+    "_id": "s03Qe51qKPkDB7nj0dWI",
+    "category": "Bebidas",
+    "id": "s03Qe51qKPkDB7nj0dWI"
+  },
+  {
+    "name": "Servilletas",
+    "quantity": 0,
+    "minimum_stock": 10,
+    "_id": "s8djGFFZZ7Z87PPTVVN2",
+    "category": "Servicio",
+    "id": "s8djGFFZZ7Z87PPTVVN2"
+  },
+  {
+    "name": "Squirt Lata",
+    "last_updated": "2025-02-28 06:18:45.798000+00:00",
+    "quantity": 0,
+    "minimum_stock": 10,
+    "_id": "tV58Xd62DHVxoH4RWpLL",
+    "category": "Bebidas",
+    "id": "tV58Xd62DHVxoH4RWpLL"
+  },
+  {
+    "name": "Boneless",
+    "last_updated": "2025-02-28 06:20:12.783000+00:00",
+    "quantity": 43.5,
+    "minimum_stock": 10,
+    "_id": "uUzMD5vsXuztWCDC348D",
+    "category": "Principales",
+    "id": "uUzMD5vsXuztWCDC348D"
+  },
+  {
+    "name": "Mogu",
+    "last_updated": "2025-02-27 20:43:03.983000+00:00",
+    "quantity": 9,
+    "minimum_stock": 0,
+    "_id": "v3P3gyA2fIbJuPFvDzGz",
+    "category": "Bebidas",
+    "id": "v3P3gyA2fIbJuPFvDzGz"
+  },
+  {
+    "name": "Juguetes",
+    "last_updated": "2025-02-28 06:19:46.129000+00:00",
+    "quantity": 13,
+    "minimum_stock": 10,
+    "_id": "wu4qeiWkbnmodC3L3iYi",
+    "category": "Principales",
+    "id": "wu4qeiWkbnmodC3L3iYi"
+  },
+  {
+    "name": "Chocolate en Polvo",
+    "quantity": 6,
+    "minimum_stock": 10,
+    "_id": "xj5bJ2pjHNQekUrc5X4B",
+    "category": "Fuente de Sodas",
+    "id": "xj5bJ2pjHNQekUrc5X4B"
+  },
+  {
+    "name": "Agua",
+    "last_updated": "2025-02-28 06:19:43.100000+00:00",
+    "quantity": 15,
+    "minimum_stock": 0,
+    "_id": "yHHMeojdwGqW68SoAECo",
+    "category": "Bebidas",
+    "id": "yHHMeojdwGqW68SoAECo"
+  },
+  {
+    "name": "Helado Limon",
+    "quantity": 3,
+    "minimum_stock": 10,
+    "_id": "ykkjRn9O68E6EPGhjokb",
+    "category": "Fuente de Sodas",
+    "id": "ykkjRn9O68E6EPGhjokb"
+  },
+  {
+    "name": "Mascaras",
+    "last_updated": "2025-02-28 06:19:46.479000+00:00",
+    "quantity": 120,
+    "minimum_stock": 10,
+    "_id": "zJktZ8gLodoZwifafqxM",
+    "category": "Empaques",
+    "id": "zJktZ8gLodoZwifafqxM"
+  }
+]

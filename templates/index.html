@@ -1,30 +1,128 @@
-{% extends 'layout.html' %}
+{% extends "layout.html" %}
 
-{% block title %}Inicio - Inventario Zombie{% endblock %}
+{% block title %}{{ title }} - Inventario Zombie{% endblock %}
+
+{% block head %}
+<style>
+    .welcome-container {
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 2rem;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        text-align: center;
+    }
+    
+    .welcome-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        color: #007bff;
+    }
+    
+    .welcome-title {
+        margin-bottom: 1.5rem;
+        color: #343a40;
+    }
+    
+    .welcome-subtitle {
+        color: #6c757d;
+        margin-bottom: 2rem;
+    }
+    
+    .dashboard-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 1.5rem;
+        margin-top: 2rem;
+    }
+    
+    .action-card {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
+        padding: 1.5rem;
+        width: 200px;
+        transition: transform 0.3s, box-shadow 0.3s;
+        cursor: pointer;
+        text-decoration: none;
+        color: inherit;
+    }
+    
+    .action-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .action-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        color: #007bff;
+    }
+    
+    .action-title {
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .action-description {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h1>Bienvenido a Inventario Zombie</h1>
-    <p>Sistema de gestión de inventario y ventas para cocina</p>
-    
-    <div class="dashboard-cards">
-        <div class="card">
-            <h2>Cocina</h2>
-            <p>Registro de recepción de artículos</p>
-            <a href="#" class="btn">Acceder</a>
-        </div>
+<div class="welcome-container">
+    {% if current_user.rol == 'admin' %}
+        <i class="fas fa-tachometer-alt welcome-icon"></i>
+        <h1 class="welcome-title">Bienvenido al Panel de Administración</h1>
+        <p class="welcome-subtitle">Administra tu inventario, ventas y usuarios desde un solo lugar.</p>
         
-        <div class="card">
-            <h2>Ventas</h2>
-            <p>Importación y análisis de ventas</p>
-            <a href="#" class="btn">Acceder</a>
+        <div class="dashboard-actions">
+            <a href="{{ url_for('ingredientes_web.index') }}" class="action-card">
+                <i class="fas fa-carrot action-icon"></i>
+                <div class="action-title">Ingredientes</div>
+                <div class="action-description">Gestiona tu inventario de ingredientes</div>
+            </a>
+            
+            <a href="{{ url_for('articulos_web.index') }}" class="action-card">
+                <i class="fas fa-hamburger action-icon"></i>
+                <div class="action-title">Artículos</div>
+                <div class="action-description">Administra los productos de venta</div>
+            </a>
+            
+            <a href="{{ url_for('ventas_web.lista') }}" class="action-card">
+                <i class="fas fa-chart-line action-icon"></i>
+                <div class="action-title">Ventas</div>
+                <div class="action-description">Visualiza e importa datos de ventas</div>
+            </a>
+            
+            <a href="{{ url_for('auth.lista_usuarios') }}" class="action-card">
+                <i class="fas fa-users action-icon"></i>
+                <div class="action-title">Usuarios</div>
+                <div class="action-description">Gestiona las cuentas de usuario</div>
+            </a>
         </div>
+    {% elif current_user.rol == 'cocina' %}
+        <i class="fas fa-utensils welcome-icon"></i>
+        <h1 class="welcome-title">Bienvenido al Panel de Cocina</h1>
+        <p class="welcome-subtitle">Registra la recepción de ingredientes de manera rápida y eficiente.</p>
         
-        <div class="card">
-            <h2>Inventario</h2>
-            <p>Gestión de artículos e ingredientes</p>
-            <a href="#" class="btn">Acceder</a>
+        <div class="dashboard-actions">
+            <a href="{{ url_for('recepciones_web.formulario') }}" class="action-card">
+                <i class="fas fa-clipboard-list action-icon"></i>
+                <div class="action-title">Recepción</div>
+                <div class="action-description">Registrar recepción de ingredientes</div>
+            </a>
+            
+            <a href="{{ url_for('recepciones_web.lista') }}" class="action-card">
+                <i class="fas fa-history action-icon"></i>
+                <div class="action-title">Historial</div>
+                <div class="action-description">Ver historial de recepciones</div>
+            </a>
         </div>
-    </div>
+    {% endif %}
 </div>
 {% endblock %} 

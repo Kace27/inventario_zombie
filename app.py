@@ -1,7 +1,9 @@
 from flask import Flask, render_template, jsonify, request
+from flask_login import LoginManager, login_required, current_user
 from dotenv import load_dotenv
 import os
 import sqlite3
+import datetime
 
 # Load environment variables
 load_dotenv()
@@ -11,6 +13,8 @@ app = Flask(__name__)
 app.config.from_mapping(
     SECRET_KEY=os.environ.get('SECRET_KEY', 'dev'),
     DATABASE=os.path.join(app.instance_path, 'inventario_zombie.sqlite'),
+    SESSION_COOKIE_SECURE=os.environ.get('FLASK_ENV') == 'production',
+    PERMANENT_SESSION_LIFETIME=int(os.environ.get('SESSION_LIFETIME', 3600)),  # 1 hour default
 )
 
 # Ensure the instance folder exists
@@ -22,6 +26,23 @@ except OSError:
 # Import database module
 from database import init_app, get_db
 init_app(app)
+
+# Setup Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'auth.login'
+login_manager.login_message = 'Por favor inicie sesión para acceder a esta página.'
+login_manager.login_message_category = 'info'
+
+@login_manager.user_loader
+def load_user(user_id):
+    from routes.auth import User
+    return User.get_by_id(user_id)
+
+# Add now function to templates
+@app.template_global()
+def now():
+    return datetime.datetime.now()
 
 # Import error handler and initialize it
 from utils.error_handler import ErrorHandler
@@ -41,10 +62,15 @@ def add_cors_headers(response):
 def options_handler(path):
     return jsonify({}), 200
 
-# Routes
+# Main route - redirect to login if not authenticated
 @app.route('/')
+@login_required
 def index():
-    return render_template('index.html')
+    # Redirect to appropriate page based on role
+    if current_user.rol == 'cocina':
+        return render_template('index.html', title='Panel de Cocina')
+    else:
+        return render_template('index.html', title='Panel de Administración')
 
 # Import API routes
 import routes.ingredientes
@@ -53,6 +79,7 @@ import routes.composicion
 import routes.ventas
 import routes.recepciones
 import routes.web
+import routes.auth
 
 # Register API blueprints
 app.register_blueprint(routes.ingredientes.ingredientes_bp)
@@ -60,6 +87,7 @@ app.register_blueprint(routes.articulos.articulos_bp)
 app.register_blueprint(routes.composicion.composicion_bp)
 app.register_blueprint(routes.ventas.bp)
 app.register_blueprint(routes.recepciones.bp)
+app.register_blueprint(routes.auth.auth_bp)
 
 # Register web UI blueprints
 app.register_blueprint(routes.ingredientes.ingredientes_web_bp)
@@ -79,6 +107,15 @@ def verify_schema():
                 db.execute("ALTER TABLE Ingredientes ADD COLUMN categoria TEXT")
                 db.commit()
                 print("Added 'categoria' column successfully.")
+        except sqlite3.Error as e:
+            print(f"Schema verification error: {e}")
+        
+        # Check if Usuarios table exists
+        try:
+            cursor = db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='Usuarios'")
+            if not cursor.fetchone():
+                print("Usuarios table not found. You should run the migration script.")
+                print("Run: python migrate_add_usuarios.py")
         except sqlite3.Error as e:
             print(f"Schema verification error: {e}")
 

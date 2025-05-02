@@ -1,0 +1,184 @@
+{% extends "layout.html" %}
+
+{% block title %}Iniciar Sesión - Inventario Zombie{% endblock %}
+
+{% block head %}
+<style>
+    .login-container {
+        max-width: 400px;
+        margin: 2rem auto;
+        padding: 2rem;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .tab-container {
+        display: flex;
+        margin-bottom: 1.5rem;
+    }
+    
+    .tab {
+        flex: 1;
+        text-align: center;
+        padding: 0.75rem;
+        background-color: #e9ecef;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+    
+    .tab:first-child {
+        border-top-left-radius: 4px;
+        border-bottom-left-radius: 4px;
+    }
+    
+    .tab:last-child {
+        border-top-right-radius: 4px;
+        border-bottom-right-radius: 4px;
+    }
+    
+    .tab.active {
+        background-color: #007bff;
+        color: white;
+    }
+    
+    .tab-content {
+        display: none;
+    }
+    
+    .tab-content.active {
+        display: block;
+    }
+    
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    
+    label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: bold;
+    }
+    
+    input[type="text"], 
+    input[type="password"],
+    input[type="number"] {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        font-size: 1rem;
+    }
+    
+    .btn-primary {
+        width: 100%;
+        padding: 0.75rem;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: background-color 0.3s;
+    }
+    
+    .btn-primary:hover {
+        background-color: #0069d9;
+    }
+    
+    .alert-error {
+        padding: 0.75rem;
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+        border-radius: 4px;
+        margin-bottom: 1rem;
+    }
+    
+    .remember-me {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    
+    .remember-me input {
+        margin-right: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <h2>Iniciar Sesión</h2>
+    
+    {% if error %}
+    <div class="alert-error">
+        {{ error }}
+    </div>
+    {% endif %}
+    
+    <div class="tab-container">
+        <div class="tab active" id="tab-admin">Administrador</div>
+        <div class="tab" id="tab-cocina">Cocina</div>
+    </div>
+    
+    <div class="tab-content active" id="content-admin">
+        <form action="{{ url_for('auth.login') }}" method="post">
+            <div class="form-group">
+                <label for="admin-nombre">Usuario</label>
+                <input type="text" id="admin-nombre" name="nombre" required>
+            </div>
+            <div class="form-group">
+                <label for="admin-password">Contraseña</label>
+                <input type="password" id="admin-password" name="password" required>
+            </div>
+            <div class="remember-me">
+                <input type="checkbox" id="admin-remember" name="remember">
+                <label for="admin-remember">Recordar sesión</label>
+            </div>
+            <button type="submit" class="btn-primary">Iniciar Sesión</button>
+        </form>
+    </div>
+    
+    <div class="tab-content" id="content-cocina">
+        <form action="{{ url_for('auth.login') }}" method="post">
+            <div class="form-group">
+                <label for="cocina-nombre">Usuario</label>
+                <input type="text" id="cocina-nombre" name="nombre" required>
+            </div>
+            <div class="form-group">
+                <label for="cocina-pin">PIN</label>
+                <input type="number" id="cocina-pin" name="pin" required maxlength="4" pattern="[0-9]{4}">
+            </div>
+            <div class="remember-me">
+                <input type="checkbox" id="cocina-remember" name="remember">
+                <label for="cocina-remember">Recordar sesión</label>
+            </div>
+            <button type="submit" class="btn-primary">Iniciar Sesión</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Tab switching functionality
+    const tabs = document.querySelectorAll('.tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Remove active class from all tabs and contents
+            tabs.forEach(t => t.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
+            
+            // Add active class to clicked tab
+            tab.classList.add('active');
+            
+            // Show corresponding content
+            const contentId = 'content-' + tab.id.split('-')[1];
+            document.getElementById(contentId).classList.add('active');
+        });
+    });
+</script>
+{% endblock %} 

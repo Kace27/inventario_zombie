@@ -4,6 +4,8 @@ DROP TABLE IF EXISTS ComposicionArticulo;
 DROP TABLE IF EXISTS Ventas;
 DROP TABLE IF EXISTS RecepcionesCocina;
 DROP TABLE IF EXISTS AjustesInventario;
+DROP TABLE IF EXISTS Usuarios;
+DROP TABLE IF EXISTS LoginAttempts;
 
 CREATE TABLE Ingredientes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,4 +72,24 @@ CREATE TABLE AjustesInventario (
     motivo TEXT,
     fecha_ajuste TEXT NOT NULL,
     FOREIGN KEY (ingrediente_id) REFERENCES Ingredientes (id)
+);
+
+CREATE TABLE Usuarios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT NOT NULL UNIQUE,
+    contrasena_hash TEXT NOT NULL,
+    pin TEXT,
+    rol TEXT NOT NULL,
+    activo BOOLEAN NOT NULL DEFAULT 1,
+    fecha_creacion TEXT NOT NULL,
+    ultimo_acceso TEXT,
+    intentos_fallidos INTEGER DEFAULT 0
+);
+
+CREATE TABLE LoginAttempts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre_usuario TEXT NOT NULL,
+    ip_address TEXT,
+    timestamp TEXT NOT NULL,
+    exito BOOLEAN NOT NULL
 ); 
