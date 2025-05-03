@@ -30,6 +30,11 @@ def importar():
     """Render the sales import page"""
     return render_template('ventas/importar.html')
 
+@ventas_web.route('/importar-recibos', methods=['GET'])
+def importar_recibos():
+    """Render the receipts import page"""
+    return render_template('ventas/importar_recibos.html')
+
 @ventas_web.route('', methods=['GET'])
 def lista():
     """Render the sales listing page"""

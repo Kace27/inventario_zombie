@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app
 import sqlite3
 from database import get_db
-from utils.csv_parser import parse_csv, validate_sales_data
+from utils.csv_parser import parse_csv, validate_sales_data, parse_receipts_data, format_date
 from utils.error_handler import handle_error
 import json
 import datetime
@@ -232,6 +232,227 @@ def importar_ventas():
             
     except Exception as e:
         return handle_error(str(e))
+
+@bp.route('/importar-recibos', methods=['POST'])
+def importar_recibos():
+    """
+    Import sales data from receipts in a CSV file.
+    
+    Expected request:
+    - file: CSV file with receipts data containing 'Fecha' and 'Descripción' columns
+    
+    Returns:
+    - JSON response with import results
+    """
+    try:
+        # Check if file is present in request
+        if 'file' not in request.files:
+            return jsonify({"success": False, "error": "No file provided"}), 400
+        
+        file = request.files['file']
+        
+        # Check if filename is empty
+        if file.filename == '':
+            return jsonify({"success": False, "error": "No file selected"}), 400
+        
+        # Check file extension
+        if not file.filename.endswith('.csv'):
+            return jsonify({"success": False, "error": "File must be a CSV"}), 400
+        
+        # Parse the CSV file
+        file_content = file.read()
+        parse_result = parse_receipts_data(file_content)
+        
+        if not parse_result["success"]:
+            return jsonify({"success": False, "error": parse_result["error"]}), 400
+        
+        # Get the parsed sales data by date
+        sales_by_date = parse_result["data"]
+        
+        if not sales_by_date:
+            return jsonify({"success": False, "error": "No valid sales data found in the CSV"}), 400
+        
+        # Debug log
+        current_app.logger.info(f"Parsed sales data: {json.dumps(sales_by_date)}")
+        
+        # Process and save the data to the database
+        db = get_db()
+        cursor = db.cursor()
+        
+        # Initialize counters
+        inserted_count = 0
+        created_articles_count = 0
+        errors = []
+        dates_imported = []
+        
+        # Begin transaction
+        cursor.execute("BEGIN TRANSACTION")
+        
+        try:
+            for date_str, products in sales_by_date.items():
+                # Convert date format from DD/MM/YY to YYYY-MM-DD
+                formatted_date = format_date(date_str)
+                dates_imported.append(formatted_date)
+                
+                # Debug log
+                current_app.logger.info(f"Processing date: {date_str} -> {formatted_date}")
+                
+                # Set a default time
+                default_time = "12:00:00"
+                
+                for product_key, quantity in products.items():
+                    try:
+                        # Extract product name and variant
+                        if "(" in product_key and ")" in product_key:
+                            product_name = product_key.split("(")[0].strip()
+                            variant = product_key.split("(")[1].split(")")[0].strip()
+                        else:
+                            product_name = product_key
+                            variant = "Sin variante"
+                        
+                        # Debug log
+                        current_app.logger.info(f"Processing product: {product_name} (variant: {variant}) - quantity: {quantity}")
+                        
+                        # Check if the article exists
+                        cursor.execute(
+                            "SELECT id, precio_venta, categoria FROM ArticulosVendidos WHERE nombre = ?",
+                            (product_name,)
+                        )
+                        articulo_result = cursor.fetchone()
+                        
+                        if not articulo_result:
+                            # Article doesn't exist, create it
+                            cursor.execute(
+                                """
+                                INSERT INTO ArticulosVendidos (nombre, categoria, precio_venta)
+                                VALUES (?, ?, ?)
+                                """,
+                                (product_name, "Sin categoría", 0)  # Default values
+                            )
+                            articulo_id = cursor.lastrowid
+                            precio_unitario = 0
+                            categoria = "Sin categoría"
+                            created_articles_count += 1
+                            
+                            # Log article creation
+                            current_app.logger.info(f"Created new article: {product_name} (ID: {articulo_id})")
+                        else:
+                            articulo_id = articulo_result[0]
+                            precio_unitario = articulo_result[1] or 0
+                            categoria = articulo_result[2] or "Sin categoría"
+                            
+                            # Debug log
+                            current_app.logger.info(f"Found existing article: {product_name} (ID: {articulo_id})")
+                        
+                        # Prepare the sales data
+                        sale_data = {
+                            'fecha': formatted_date,
+                            'hora': default_time,
+                            'articulo': product_name,
+                            'categoria': categoria,
+                            'subcategoria': variant if variant != "Sin variante" else None,
+                            'articulos_vendidos': quantity,
+                            'precio_unitario': precio_unitario,
+                            'total': precio_unitario * quantity,
+                            'ticket': None,  # These fields are not available in receipt data
+                            'empleado': None,
+                            'mesa': None,
+                            'comensales': None,
+                            'iva': None,
+                            'propina': None,
+                            'costo_estimado': None,
+                            'ganancia_estimada': None,
+                            'porcentaje_ganancia': None
+                        }
+                        
+                        # Debug log
+                        current_app.logger.info(f"Inserting sale with data: {json.dumps(sale_data)}")
+                        
+                        # Insert into Ventas table
+                        columns = ', '.join(sale_data.keys())
+                        placeholders = ', '.join(['?'] * len(sale_data))
+                        
+                        cursor.execute(
+                            f"INSERT INTO Ventas ({columns}) VALUES ({placeholders})",
+                            tuple(sale_data.values())
+                        )
+                        inserted_count += 1
+                        
+                        # Update inventory based on composition
+                        cursor.execute(
+                            """
+                            SELECT ca.ingrediente_id, ca.cantidad, i.nombre
+                            FROM ComposicionArticulo ca
+                            JOIN Ingredientes i ON ca.ingrediente_id = i.id
+                            WHERE ca.articulo_id = ?
+                            """,
+                            (articulo_id,)
+                        )
+                        composition = cursor.fetchall()
+                        
+                        # If composition exists, update inventory
+                        if composition:
+                            # Update inventory for each ingredient
+                            for comp_row in composition:
+                                ingrediente_id = comp_row[0]
+                                cantidad_por_unidad = comp_row[1]
+                                ingrediente_nombre = comp_row[2]
+                                
+                                # Calculate total quantity to reduce
+                                cantidad_reducir = cantidad_por_unidad * quantity
+                                
+                                # Update the ingredient quantity
+                                cursor.execute(
+                                    """
+                                    UPDATE Ingredientes
+                                    SET cantidad_actual = cantidad_actual - ?
+                                    WHERE id = ?
+                                    """,
+                                    (cantidad_reducir, ingrediente_id)
+                                )
+                                
+                                current_app.logger.info(
+                                    f"Updated ingredient {ingrediente_nombre}: reduced by {cantidad_reducir}"
+                                )
+                    
+                    except sqlite3.Error as e:
+                        current_app.logger.error(f"Error processing product {product_key}: {str(e)}")
+                        errors.append({
+                            "product": product_key,
+                            "error": f"Error: {str(e)}"
+                        })
+            
+            # Commit the transaction if no errors
+            db.commit()
+            
+            # Verify the insertion
+            sales_check = []
+            for date in dates_imported:
+                cursor.execute("SELECT COUNT(*) as count FROM Ventas WHERE fecha = ?", (date,))
+                result = cursor.fetchone()
+                sales_check.append({"date": date, "count": result['count']})
+            
+            current_app.logger.info(f"Sales verification: {json.dumps(sales_check)}")
+            
+            return jsonify({
+                "success": True,
+                "message": "Receipts data imported successfully",
+                "inserted_count": inserted_count,
+                "created_articles_count": created_articles_count,
+                "errors": errors if errors else None,
+                "dates_imported": dates_imported,
+                "sales_verification": sales_check
+            })
+            
+        except Exception as e:
+            # Rollback on error
+            db.rollback()
+            current_app.logger.error(f"Error importing receipts data: {str(e)}")
+            return jsonify({"success": False, "error": str(e)}), 500
+            
+    except Exception as e:
+        current_app.logger.error(f"Error in import receipts endpoint: {str(e)}")
+        return handle_error(e, "Error importing receipts data")
 
 @bp.route('', methods=['GET'])
 def get_ventas():

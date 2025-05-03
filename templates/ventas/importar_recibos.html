@@ -1,0 +1,457 @@
+{% extends "layout.html" %}
+
+{% block title %}Importar Recibos - Inventario Zombie{% endblock %}
+
+{% block head %}
+<style>
+    .import-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .file-upload-area {
+        border: 2px dashed #ccc;
+        border-radius: 8px;
+        padding: 30px;
+        text-align: center;
+        margin-bottom: 20px;
+        transition: all 0.3s;
+    }
+    .file-upload-area:hover {
+        border-color: #888;
+    }
+    .file-upload-area.active {
+        border-color: #4CAF50;
+        background-color: rgba(76, 175, 80, 0.1);
+    }
+    .status-container {
+        margin-top: 20px;
+        padding: 15px;
+        border-radius: 4px;
+        display: none;
+    }
+    .status-success {
+        background-color: rgba(76, 175, 80, 0.1);
+        border: 1px solid #4CAF50;
+    }
+    .status-error {
+        background-color: rgba(244, 67, 54, 0.1);
+        border: 1px solid #F44336;
+    }
+    .preview-container {
+        margin-top: 20px;
+        overflow-x: auto;
+    }
+    .preview-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .preview-table th, .preview-table td {
+        padding: 8px;
+        border: 1px solid #ddd;
+    }
+    .preview-table th {
+        background-color: #f2f2f2;
+    }
+    .format-info {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 4px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .format-info h3 {
+        margin-top: 0;
+    }
+    .form-actions {
+        margin-top: 20px;
+    }
+    .results-container {
+        margin-top: 20px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 15px;
+        display: none;
+    }
+    .date-section {
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
+    }
+    .date-section h3 {
+        margin-top: 0;
+        color: #333;
+    }
+    .product-list {
+        list-style-type: none;
+        padding-left: 0;
+    }
+    .product-list li {
+        padding: 5px 0;
+        display: flex;
+    }
+    .quantity {
+        font-weight: bold;
+        margin-right: 10px;
+        min-width: 40px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="import-container">
+    <h1>Importar Datos de Recibos</h1>
+    
+    <div class="format-info">
+        <h3>Formato Esperado del CSV</h3>
+        <p>El archivo CSV debe contener al menos las siguientes columnas:</p>
+        <ul>
+            <li><strong>Fecha</strong>: La fecha del recibo (formato DD/MM/YY)</li>
+            <li><strong>Descripción</strong>: Descripción del recibo que incluye productos en formato "Cantidad x Producto (Variante)"</li>
+        </ul>
+        <p>Ejemplo de contenido en la columna Descripción:</p>
+        <code>2 x Café Americano (Grande), 1 x Pastel (Chocolate)</code>
+    </div>
+    
+    <div class="file-upload-area" id="dropZone">
+        <p><i class="fas fa-file-csv fa-3x"></i></p>
+        <p>Arrastra y suelta un archivo CSV o haz clic para seleccionarlo</p>
+        <input type="file" id="fileInput" accept=".csv" style="display: none;">
+        <button id="browseButton" class="btn">Seleccionar archivo</button>
+    </div>
+    
+    <div id="fileInfo" style="display: none;">
+        <p>Archivo seleccionado: <span id="fileName"></span></p>
+        <div class="form-actions">
+            <button id="importButton" class="btn btn-primary">Importar datos</button>
+            <button id="changeFileButton" class="btn btn-secondary">Cambiar archivo</button>
+        </div>
+    </div>
+    
+    <div id="previewContainer" class="preview-container" style="display: none;">
+        <h2>Vista previa de los datos</h2>
+        <div id="previewTable"></div>
+    </div>
+    
+    <div id="resultsContainer" class="results-container">
+        <h2>Resultados de la importación</h2>
+        <div id="resultsContent"></div>
+    </div>
+    
+    <div id="statusContainer" class="status-container">
+        <h3 id="statusTitle"></h3>
+        <p id="statusMessage"></p>
+        <div id="statusDetails"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const browseButton = document.getElementById('browseButton');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const changeFileButton = document.getElementById('changeFileButton');
+        const importButton = document.getElementById('importButton');
+        const statusContainer = document.getElementById('statusContainer');
+        const statusTitle = document.getElementById('statusTitle');
+        const statusMessage = document.getElementById('statusMessage');
+        const statusDetails = document.getElementById('statusDetails');
+        const previewContainer = document.getElementById('previewContainer');
+        const previewTable = document.getElementById('previewTable');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const resultsContent = document.getElementById('resultsContent');
+        
+        let csvFile = null;
+        let csvHeaders = [];
+        let csvData = [];
+        
+        // Handle click on browse button
+        browseButton.addEventListener('click', function() {
+            fileInput.click();
+        });
+        
+        // Handle file selection
+        fileInput.addEventListener('change', handleFileSelect);
+        
+        // Handle drag and drop
+        dropZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.add('active');
+        });
+        
+        dropZone.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.remove('active');
+        });
+        
+        dropZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.remove('active');
+            
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            fileInput.files = files;
+            handleFileSelect(e);
+        });
+        
+        // Handle change file button
+        changeFileButton.addEventListener('click', function() {
+            resetUI();
+        });
+        
+        // Handle import button
+        importButton.addEventListener('click', importData);
+        
+        // Function to handle file selection
+        function handleFileSelect(e) {
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                return;
+            }
+            
+            if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+                showStatus('error', 'Error de archivo', 'Por favor, selecciona un archivo CSV válido.');
+                return;
+            }
+            
+            csvFile = file;
+            fileName.textContent = file.name;
+            
+            dropZone.style.display = 'none';
+            fileInfo.style.display = 'block';
+            
+            parseCSV(file);
+        }
+        
+        // Function to parse CSV file
+        function parseCSV(file) {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const contents = e.target.result;
+                const rows = contents.split('\n');
+                
+                if (rows.length < 2) {
+                    showStatus('error', 'Error de formato', 'El archivo CSV está vacío o no tiene suficientes filas.');
+                    return;
+                }
+                
+                csvHeaders = parseCSVRow(rows[0]);
+                
+                if (!csvHeaders.includes('Fecha') || !csvHeaders.includes('Descripción')) {
+                    showStatus('error', 'Error de formato', 'El archivo CSV debe contener las columnas "Fecha" y "Descripción".');
+                    return;
+                }
+                
+                csvData = [];
+                for (let i = 1; i < rows.length; i++) {
+                    if (rows[i].trim()) {
+                        csvData.push(parseCSVRow(rows[i]));
+                    }
+                }
+                
+                showPreview();
+            };
+            
+            reader.onerror = function() {
+                showStatus('error', 'Error de lectura', 'No se pudo leer el archivo seleccionado.');
+            };
+            
+            reader.readAsText(file);
+        }
+        
+        // Function to parse a CSV row
+        function parseCSVRow(row) {
+            const result = [];
+            let inQuotes = false;
+            let currentValue = '';
+            
+            for (let i = 0; i < row.length; i++) {
+                const char = row[i];
+                
+                if (char === '"' && (i === 0 || row[i - 1] !== '\\')) {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(currentValue);
+                    currentValue = '';
+                } else {
+                    currentValue += char;
+                }
+            }
+            
+            result.push(currentValue);
+            return result;
+        }
+        
+        // Function to show preview
+        function showPreview() {
+            // Display the first 5 rows of the CSV data
+            const previewData = csvData.slice(0, 5);
+            
+            let tableHTML = '<table class="preview-table"><thead><tr>';
+            
+            // Headers
+            for (const header of csvHeaders) {
+                tableHTML += `<th>${header}</th>`;
+            }
+            
+            tableHTML += '</tr></thead><tbody>';
+            
+            // Data rows
+            for (const row of previewData) {
+                tableHTML += '<tr>';
+                for (let i = 0; i < csvHeaders.length; i++) {
+                    tableHTML += `<td>${row[i] || ''}</td>`;
+                }
+                tableHTML += '</tr>';
+            }
+            
+            tableHTML += '</tbody></table>';
+            
+            previewTable.innerHTML = tableHTML;
+            previewContainer.style.display = 'block';
+        }
+        
+        // Function to import data
+        function importData() {
+            if (!csvFile) {
+                showStatus('error', 'Error', 'No se ha seleccionado ningún archivo.');
+                return;
+            }
+            
+            // Disable import button while processing
+            importButton.disabled = true;
+            importButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importando...';
+            
+            // Prepare FormData
+            const formData = new FormData();
+            formData.append('file', csvFile);
+            
+            // Send data to server
+            fetch('/api/ventas/importar-recibos', {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Re-enable import button
+                importButton.disabled = false;
+                importButton.innerHTML = 'Importar datos';
+                
+                if (data.success) {
+                    showStatus('success', 'Importación completada', `Se importaron ${data.inserted_count} registros de ventas. Se crearon ${data.created_articles_count} nuevos artículos.`);
+                    
+                    // Show the imported data summary
+                    showImportResults(data);
+                } else {
+                    let errorMsg = data.error || 'Ocurrió un error al importar los datos.';
+                    
+                    if (data.errors && data.errors.length > 0) {
+                        errorMsg += '<ul>';
+                        for (const error of data.errors) {
+                            errorMsg += `<li>${error.product || ''}: ${error.error}</li>`;
+                        }
+                        errorMsg += '</ul>';
+                    }
+                    
+                    showStatus('error', 'Error de importación', errorMsg);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                importButton.disabled = false;
+                importButton.innerHTML = 'Importar datos';
+                showStatus('error', 'Error de conexión', 'Ocurrió un error al comunicarse con el servidor.');
+            });
+        }
+        
+        // Function to show import results
+        function showImportResults(data) {
+            resultsContainer.style.display = 'block';
+            
+            let resultsHTML = `
+                <p>Importación completada con éxito.</p>
+                <p>Artículos importados: ${data.inserted_count}</p>
+                <p>Nuevos artículos creados: ${data.created_articles_count}</p>
+            `;
+            
+            // Show imported dates
+            if (data.dates_imported && data.dates_imported.length > 0) {
+                resultsHTML += `<p>Fechas importadas:</p><ul>`;
+                data.dates_imported.forEach(date => {
+                    resultsHTML += `<li>${date}</li>`;
+                });
+                resultsHTML += `</ul>`;
+            }
+            
+            // Show verification results
+            if (data.sales_verification && data.sales_verification.length > 0) {
+                resultsHTML += `<p>Verificación de ventas:</p><ul>`;
+                data.sales_verification.forEach(check => {
+                    resultsHTML += `<li>Fecha: ${check.date} - Registros: ${check.count}</li>`;
+                });
+                resultsHTML += `</ul>`;
+            }
+            
+            // Show errors if any
+            if (data.errors && data.errors.length > 0) {
+                resultsHTML += `
+                    <p>Se encontraron ${data.errors.length} errores durante la importación:</p>
+                    <ul>
+                `;
+                
+                data.errors.forEach(error => {
+                    resultsHTML += `<li>${error.product || ''}: ${error.error}</li>`;
+                });
+                
+                resultsHTML += `</ul>`;
+            }
+            
+            // Show next steps
+            resultsHTML += `
+                <div class="mt-4">
+                    <p><strong>Próximos pasos:</strong></p>
+                    <ol>
+                        <li>Verifique los artículos importados en la <a href="/ventas">lista de ventas</a>.</li>
+                        <li>Asigne precios a los nuevos artículos creados en <a href="/articulos">gestión de artículos</a>.</li>
+                        <li>Configure la composición de los artículos para el control de inventario.</li>
+                    </ol>
+                </div>
+            `;
+            
+            resultsContent.innerHTML = resultsHTML;
+        }
+        
+        // Function to show status message
+        function showStatus(type, title, message) {
+            statusTitle.textContent = title;
+            statusMessage.innerHTML = message;
+            statusContainer.className = 'status-container status-' + type;
+            statusContainer.style.display = 'block';
+        }
+        
+        // Function to reset UI
+        function resetUI() {
+            fileInput.value = '';
+            csvFile = null;
+            csvHeaders = [];
+            csvData = [];
+            
+            dropZone.style.display = 'block';
+            fileInfo.style.display = 'none';
+            previewContainer.style.display = 'none';
+            statusContainer.style.display = 'none';
+            resultsContainer.style.display = 'none';
+        }
+    });
+</script>
+{% endblock %} 
