@@ -546,4 +546,47 @@ def get_ventas():
         })
         
     except Exception as e:
-        return handle_error(str(e)) 
+        return handle_error(str(e))
+
+@bp.route('/reset', methods=['POST'])
+def reset_ventas():
+    """
+    Resetea todas las ventas en la base de datos.
+    Solo para uso en desarrollo y depuración.
+    """
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        
+        # Contar registros antes de eliminar
+        cursor.execute("SELECT COUNT(*) as count FROM Ventas")
+        count = cursor.fetchone()['count']
+        
+        # Eliminar todos los registros
+        cursor.execute("DELETE FROM Ventas")
+        
+        # Reiniciar el autoincremento
+        cursor.execute("DELETE FROM sqlite_sequence WHERE name='Ventas'")
+        
+        # Vaciar cache de SQLite
+        cursor.execute("PRAGMA optimize")
+        
+        # Confirmar cambios
+        db.commit()
+        
+        # Log de la operación
+        current_app.logger.info(f"API: Se han eliminado {count} registros de ventas")
+        
+        return jsonify({
+            "success": True,
+            "message": f"Se han eliminado {count} registros de ventas.",
+            "count": count
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error al resetear ventas: {str(e)}")
+        db.rollback()
+        return jsonify({
+            "success": False,
+            "error": f"Error al resetear ventas: {str(e)}"
+        }), 500 

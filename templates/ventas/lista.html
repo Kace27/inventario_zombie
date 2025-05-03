@@ -26,63 +26,6 @@
         justify-content: flex-end;
         gap: 10px;
     }
-    .sales-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 20px;
-    }
-    .sales-table th, .sales-table td {
-        padding: 10px;
-        border: 1px solid #ddd;
-        text-align: left;
-    }
-    .sales-table th {
-        background-color: #f5f5f5;
-        cursor: pointer;
-    }
-    .sales-table th:hover {
-        background-color: #e9e9e9;
-    }
-    .sales-table .sorted-asc::after {
-        content: " ▲";
-    }
-    .sales-table .sorted-desc::after {
-        content: " ▼";
-    }
-    .sales-table tbody tr:hover {
-        background-color: #f5f5f5;
-        cursor: pointer;
-    }
-    .pagination {
-        display: flex;
-        justify-content: center;
-        list-style: none;
-        padding: 0;
-        margin: 20px 0;
-    }
-    .pagination li {
-        margin: 0 5px;
-    }
-    .pagination a {
-        display: block;
-        padding: 8px 12px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        text-decoration: none;
-        color: #333;
-    }
-    .pagination a:hover {
-        background-color: #f5f5f5;
-    }
-    .pagination .active a {
-        background-color: #4CAF50;
-        color: white;
-        border-color: #4CAF50;
-    }
-    .pagination .disabled a {
-        color: #ccc;
-        pointer-events: none;
-    }
     .detail-modal {
         display: none;
         position: fixed;
@@ -121,6 +64,83 @@
         font-weight: bold;
         margin-bottom: 5px;
     }
+    .receipts-by-date {
+        margin-top: 20px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    .date-header {
+        background-color: #f5f5f5;
+        padding: 10px 15px;
+        border-bottom: 1px solid #ddd;
+        cursor: pointer;
+        font-weight: bold;
+    }
+    .date-header:hover {
+        background-color: #eee;
+    }
+    .date-content {
+        padding: 0 15px;
+        display: none;
+    }
+    .date-content.open {
+        display: block;
+    }
+    .receipt-item {
+        padding: 10px 0;
+        border-bottom: 1px solid #eee;
+    }
+    .receipt-item:last-child {
+        border-bottom: none;
+    }
+    .variant-tag {
+        display: inline-block;
+        background-color: #e9f5f8;
+        color: #0066cc;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 0.85em;
+        margin-left: 8px;
+    }
+    .badge {
+        display: inline-block;
+        min-width: 10px;
+        padding: 3px 7px;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1;
+        color: #fff;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: middle;
+        background-color: #777;
+        border-radius: 10px;
+        margin-left: 5px;
+    }
+    .badge-success {
+        background-color: #5cb85c;
+    }
+    .action-links {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+    .action-links a {
+        display: inline-block;
+        padding: 6px 12px;
+        text-decoration: none;
+        border-radius: 4px;
+        color: #fff;
+    }
+    .action-links a.import-receipts-link {
+        background-color: #f0ad4e;
+    }
+    .action-links a:hover {
+        opacity: 0.9;
+    }
+    .action-links a i {
+        margin-right: 5px;
+    }
     @media (max-width: 768px) {
         .detail-grid {
             grid-template-columns: 1fr;
@@ -136,9 +156,9 @@
 <div class="content-container">
     <div class="content-header">
         <h1>Visualización de Ventas</h1>
-        <div class="content-actions">
-            <a href="{{ url_for('ventas_web.importar') }}" class="btn btn-primary">
-                <i class="fas fa-file-import"></i> Importar ventas
+        <div class="action-links">
+            <a href="{{ url_for('ventas_web.importar_recibos') }}" class="import-receipts-link">
+                <i class="fas fa-receipt"></i> Importar Recibos
             </a>
         </div>
     </div>
@@ -162,8 +182,8 @@
                     <input type="text" id="articulo" name="articulo" class="form-control" placeholder="Buscar por nombre de artículo">
                 </div>
                 <div class="filter-item">
-                    <label for="categoria">Categoría:</label>
-                    <input type="text" id="categoria" name="categoria" class="form-control" placeholder="Buscar por categoría">
+                    <label for="variante">Variante:</label>
+                    <input type="text" id="variante" name="subcategoria" class="form-control" placeholder="Buscar por variante">
                 </div>
             </div>
             <div class="filter-actions">
@@ -173,33 +193,16 @@
         </form>
     </div>
     
-    <div id="salesTableContainer">
+    <div id="salesContainer">
         <div class="loading" id="loadingIndicator">Cargando datos...</div>
-        <table id="salesTable" class="sales-table" style="display: none;">
-            <thead>
-                <tr>
-                    <th data-sort="fecha">Fecha</th>
-                    <th data-sort="hora">Hora</th>
-                    <th data-sort="articulo">Artículo</th>
-                    <th data-sort="categoria">Categoría</th>
-                    <th data-sort="articulos_vendidos">Cantidad</th>
-                    <th data-sort="precio_unitario">Precio unitario</th>
-                    <th data-sort="total">Total</th>
-                </tr>
-            </thead>
-            <tbody id="salesTableBody">
-                <!-- Filled by JavaScript -->
-            </tbody>
-        </table>
-        <div id="noResultsMessage" style="display: none; text-align: center; padding: 20px;">
-            No se encontraron resultados para los filtros aplicados.
-        </div>
-    </div>
-    
-    <div class="pagination-container">
-        <ul id="pagination" class="pagination">
+        <div id="salesByDate">
             <!-- Filled by JavaScript -->
-        </ul>
+        </div>
+        <div id="noResultsMessage" style="display: none; text-align: center; padding: 20px; margin-top: 30px; background-color: #f8f9fa; border-radius: 5px; border: 1px solid #dee2e6;">
+            <i class="fas fa-info-circle" style="font-size: 24px; color: #17a2b8; margin-bottom: 10px;"></i>
+            <h4>No se encontraron ventas</h4>
+            <p>No hay registros de ventas en la base de datos. Puedes importar ventas usando la opción "Importar Recibos".</p>
+        </div>
     </div>
     
     <div id="detailModal" class="detail-modal">
@@ -220,22 +223,19 @@
         // DOM elements
         const filterForm = document.getElementById('filterForm');
         const clearFiltersBtn = document.getElementById('clearFiltersBtn');
-        const salesTable = document.getElementById('salesTable');
-        const salesTableBody = document.getElementById('salesTableBody');
+        const salesContainer = document.getElementById('salesContainer');
+        const salesByDate = document.getElementById('salesByDate');
         const loadingIndicator = document.getElementById('loadingIndicator');
         const noResultsMessage = document.getElementById('noResultsMessage');
-        const pagination = document.getElementById('pagination');
+        
+        // Modal elements
         const detailModal = document.getElementById('detailModal');
         const detailModalClose = document.querySelector('.detail-modal-close');
         const saleDetail = document.getElementById('saleDetail');
         
         // State variables
-        let currentPage = 1;
-        const itemsPerPage = 10;
-        let totalItems = 0;
         let salesData = [];
-        let sortField = 'fecha';
-        let sortDirection = 'desc';
+        let salesGrouped = {};
         
         // Initialize page
         loadSalesData();
@@ -243,36 +243,12 @@
         // Event listeners
         filterForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            currentPage = 1;
             loadSalesData();
         });
         
         clearFiltersBtn.addEventListener('click', function() {
             filterForm.reset();
-            currentPage = 1;
             loadSalesData();
-        });
-        
-        // Table header sorting
-        const tableHeaders = salesTable.querySelectorAll('th[data-sort]');
-        tableHeaders.forEach(header => {
-            header.addEventListener('click', function() {
-                const field = this.getAttribute('data-sort');
-                
-                // If clicking the same header, toggle direction
-                if (field === sortField) {
-                    sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-                } else {
-                    sortField = field;
-                    sortDirection = 'asc';
-                }
-                
-                // Update sort indicators
-                tableHeaders.forEach(h => h.classList.remove('sorted-asc', 'sorted-desc'));
-                this.classList.add(`sorted-${sortDirection}`);
-                
-                loadSalesData();
-            });
         });
         
         // Modal close button
@@ -302,41 +278,17 @@
                 }
             }
             
-            // Add pagination and sorting
-            params.append('limit', itemsPerPage);
-            params.append('offset', (currentPage - 1) * itemsPerPage);
-            
             // Fetch data from API
             fetch(`/api/ventas?${params.toString()}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         salesData = data.data;
-                        totalItems = data.total;
                         
-                        // Sort results client-side
-                        salesData.sort((a, b) => {
-                            let valueA = a[sortField];
-                            let valueB = b[sortField];
-                            
-                            // Handle numeric values
-                            if (!isNaN(valueA) && !isNaN(valueB)) {
-                                valueA = Number(valueA);
-                                valueB = Number(valueB);
-                            }
-                            
-                            // Compare values
-                            if (valueA < valueB) {
-                                return sortDirection === 'asc' ? -1 : 1;
-                            }
-                            if (valueA > valueB) {
-                                return sortDirection === 'asc' ? 1 : -1;
-                            }
-                            return 0;
-                        });
+                        // Group by date
+                        salesGrouped = groupSalesByDate(salesData);
                         
-                        renderTable();
-                        renderPagination();
+                        renderSales();
                     } else {
                         showError('Error al cargar los datos de ventas.');
                     }
@@ -349,98 +301,117 @@
                 });
         }
         
-        // Render sales table
-        function renderTable() {
-            // Clear table
-            salesTableBody.innerHTML = '';
+        // Group sales by date
+        function groupSalesByDate(sales) {
+            const grouped = {};
             
-            if (salesData.length === 0) {
-                salesTable.style.display = 'none';
+            sales.forEach(sale => {
+                if (!grouped[sale.fecha]) {
+                    grouped[sale.fecha] = [];
+                }
+                grouped[sale.fecha].push(sale);
+            });
+            
+            return grouped;
+        }
+        
+        // Render sales
+        function renderSales() {
+            // Clear container
+            salesByDate.innerHTML = '';
+            
+            // Check if there's any data at all
+            if (!salesData || salesData.length === 0 || Object.keys(salesGrouped).length === 0) {
+                salesByDate.style.display = 'none';
                 noResultsMessage.style.display = 'block';
                 return;
             }
             
-            salesTable.style.display = 'table';
+            salesByDate.style.display = 'block';
             noResultsMessage.style.display = 'none';
             
-            // Add rows
-            salesData.forEach(sale => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${formatDate(sale.fecha)}</td>
-                    <td>${sale.hora}</td>
-                    <td>${sale.articulo}</td>
-                    <td>${sale.categoria || '-'}</td>
-                    <td>${sale.articulos_vendidos}</td>
-                    <td>${formatCurrency(sale.precio_unitario)}</td>
-                    <td>${formatCurrency(sale.total)}</td>
+            // Sort dates in descending order
+            const sortedDates = Object.keys(salesGrouped).sort().reverse();
+            
+            // Create date sections
+            sortedDates.forEach(date => {
+                const sales = salesGrouped[date];
+                
+                // Count total items for this date
+                const totalItems = sales.reduce((sum, sale) => sum + parseInt(sale.articulos_vendidos || 0, 10), 0);
+                
+                // Create date header
+                const dateSection = document.createElement('div');
+                dateSection.className = 'receipts-by-date';
+                
+                const dateHeader = document.createElement('div');
+                dateHeader.className = 'date-header';
+                dateHeader.innerHTML = `
+                    ${formatDate(date)} <span class="badge badge-success">${totalItems} artículos</span>
                 `;
                 
-                row.addEventListener('click', () => showSaleDetail(sale));
+                // Create date content
+                const dateContent = document.createElement('div');
+                dateContent.className = 'date-content';
                 
-                salesTableBody.appendChild(row);
-            });
-        }
-        
-        // Render pagination controls
-        function renderPagination() {
-            pagination.innerHTML = '';
-            
-            const totalPages = Math.ceil(totalItems / itemsPerPage);
-            
-            if (totalPages <= 1) {
-                return;
-            }
-            
-            // Previous button
-            const prevLi = document.createElement('li');
-            prevLi.classList.add(currentPage === 1 ? 'disabled' : '');
-            prevLi.innerHTML = `<a href="#" aria-label="Previous"><span aria-hidden="true">&laquo;</span></a>`;
-            if (currentPage > 1) {
-                prevLi.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    currentPage--;
-                    loadSalesData();
-                });
-            }
-            pagination.appendChild(prevLi);
-            
-            // Page numbers
-            let startPage = Math.max(1, currentPage - 2);
-            let endPage = Math.min(totalPages, startPage + 4);
-            
-            if (endPage - startPage < 4) {
-                startPage = Math.max(1, endPage - 4);
-            }
-            
-            for (let i = startPage; i <= endPage; i++) {
-                const li = document.createElement('li');
-                li.classList.add(i === currentPage ? 'active' : '');
-                li.innerHTML = `<a href="#">${i}</a>`;
-                
-                li.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    if (i !== currentPage) {
-                        currentPage = i;
-                        loadSalesData();
+                // Group sales by articulo and subcategoria
+                const groupedByProduct = {};
+                sales.forEach(sale => {
+                    const key = `${sale.articulo}|${sale.subcategoria || 'Sin variante'}`;
+                    if (!groupedByProduct[key]) {
+                        groupedByProduct[key] = {
+                            articulo: sale.articulo,
+                            subcategoria: sale.subcategoria || 'Sin variante',
+                            cantidad: 0,
+                            precio_unitario: sale.precio_unitario,
+                            total: 0,
+                            detalle: sale // Keep a reference to one of the sale records for detail view
+                        };
                     }
+                    groupedByProduct[key].cantidad += parseInt(sale.articulos_vendidos || 0, 10);
+                    groupedByProduct[key].total += parseFloat(sale.total || 0);
                 });
                 
-                pagination.appendChild(li);
-            }
-            
-            // Next button
-            const nextLi = document.createElement('li');
-            nextLi.classList.add(currentPage === totalPages ? 'disabled' : '');
-            nextLi.innerHTML = `<a href="#" aria-label="Next"><span aria-hidden="true">&raquo;</span></a>`;
-            if (currentPage < totalPages) {
-                nextLi.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    currentPage++;
-                    loadSalesData();
+                // Sort by quantity sold (descending)
+                const sortedProducts = Object.values(groupedByProduct).sort((a, b) => b.cantidad - a.cantidad);
+                
+                // Add sales items
+                sortedProducts.forEach(product => {
+                    const receiptItem = document.createElement('div');
+                    receiptItem.className = 'receipt-item';
+                    
+                    // Format price if available
+                    const priceHtml = product.precio_unitario > 0 
+                        ? `<span class="price">${formatCurrency(product.precio_unitario)}</span>` 
+                        : '';
+                    
+                    // Format variant
+                    const variantHtml = product.subcategoria !== 'Sin variante' 
+                        ? `<span class="variant-tag">${product.subcategoria}</span>` 
+                        : '';
+                    
+                    receiptItem.innerHTML = `
+                        <strong>${product.cantidad} ×</strong> ${product.articulo} ${variantHtml} ${priceHtml}
+                    `;
+                    
+                    // Add click event to show details
+                    receiptItem.addEventListener('click', () => {
+                        showSaleDetail(product.detalle);
+                    });
+                    
+                    dateContent.appendChild(receiptItem);
                 });
-            }
-            pagination.appendChild(nextLi);
+                
+                // Add click event to toggle date content
+                dateHeader.addEventListener('click', () => {
+                    dateContent.classList.toggle('open');
+                });
+                
+                // Append elements
+                dateSection.appendChild(dateHeader);
+                dateSection.appendChild(dateContent);
+                salesByDate.appendChild(dateSection);
+            });
         }
         
         // Show sale detail in modal
@@ -455,22 +426,6 @@
                     <div>${sale.hora}</div>
                 </div>
                 <div class="detail-item">
-                    <div class="detail-label">Ticket:</div>
-                    <div>${sale.ticket || '-'}</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">Empleado:</div>
-                    <div>${sale.empleado || '-'}</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">Mesa:</div>
-                    <div>${sale.mesa || '-'}</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">Comensales:</div>
-                    <div>${sale.comensales || '-'}</div>
-                </div>
-                <div class="detail-item">
                     <div class="detail-label">Artículo:</div>
                     <div>${sale.articulo}</div>
                 </div>
@@ -478,72 +433,121 @@
                     <div class="detail-label">Categoría:</div>
                     <div>${sale.categoria || '-'}</div>
                 </div>
+                ${sale.subcategoria ? `
                 <div class="detail-item">
-                    <div class="detail-label">Subcategoría:</div>
-                    <div>${sale.subcategoria || '-'}</div>
+                    <div class="detail-label">Variante:</div>
+                    <div>${sale.subcategoria}</div>
+                </div>
+                ` : ''}
+                <div class="detail-item">
+                    <div class="detail-label">Cantidad:</div>
+                    <div>${sale.articulos_vendidos}</div>
                 </div>
                 <div class="detail-item">
                     <div class="detail-label">Precio unitario:</div>
                     <div>${formatCurrency(sale.precio_unitario)}</div>
                 </div>
                 <div class="detail-item">
-                    <div class="detail-label">Cantidad vendida:</div>
-                    <div>${sale.articulos_vendidos}</div>
+                    <div class="detail-label">Total:</div>
+                    <div>${formatCurrency(sale.total)}</div>
                 </div>
+                ${sale.ticket ? `
+                <div class="detail-item">
+                    <div class="detail-label">Ticket:</div>
+                    <div>${sale.ticket}</div>
+                </div>
+                ` : ''}
+                ${sale.empleado ? `
+                <div class="detail-item">
+                    <div class="detail-label">Empleado:</div>
+                    <div>${sale.empleado}</div>
+                </div>
+                ` : ''}
+                ${sale.mesa ? `
+                <div class="detail-item">
+                    <div class="detail-label">Mesa:</div>
+                    <div>${sale.mesa}</div>
+                </div>
+                ` : ''}
+                ${sale.comensales ? `
+                <div class="detail-item">
+                    <div class="detail-label">Comensales:</div>
+                    <div>${sale.comensales}</div>
+                </div>
+                ` : ''}
+                ${sale.iva ? `
                 <div class="detail-item">
                     <div class="detail-label">IVA:</div>
                     <div>${formatCurrency(sale.iva)}</div>
                 </div>
+                ` : ''}
+                ${sale.propina ? `
                 <div class="detail-item">
                     <div class="detail-label">Propina:</div>
                     <div>${formatCurrency(sale.propina)}</div>
                 </div>
-                <div class="detail-item">
-                    <div class="detail-label">Total:</div>
-                    <div>${formatCurrency(sale.total)}</div>
-                </div>
+                ` : ''}
+                ${sale.costo_estimado ? `
                 <div class="detail-item">
                     <div class="detail-label">Costo estimado:</div>
                     <div>${formatCurrency(sale.costo_estimado)}</div>
                 </div>
+                ` : ''}
+                ${sale.ganancia_estimada ? `
                 <div class="detail-item">
                     <div class="detail-label">Ganancia estimada:</div>
                     <div>${formatCurrency(sale.ganancia_estimada)}</div>
                 </div>
+                ` : ''}
+                ${sale.porcentaje_ganancia ? `
                 <div class="detail-item">
                     <div class="detail-label">Porcentaje de ganancia:</div>
-                    <div>${sale.porcentaje_ganancia ? `${sale.porcentaje_ganancia}%` : '-'}</div>
+                    <div>${sale.porcentaje_ganancia}%</div>
                 </div>
+                ` : ''}
             `;
             
             detailModal.style.display = 'block';
         }
         
-        // Show/hide loading indicator
+        // Helper function to show loading indicator
         function showLoading(show) {
             loadingIndicator.style.display = show ? 'block' : 'none';
-            salesTable.style.display = show ? 'none' : (salesData.length > 0 ? 'table' : 'none');
         }
         
-        // Show error message
+        // Helper function to show error message
         function showError(message) {
-            noResultsMessage.textContent = message;
-            noResultsMessage.style.display = 'block';
-            salesTable.style.display = 'none';
+            alert(message);
         }
         
-        // Format date
-        function formatDate(dateString) {
-            const parts = dateString.split('-');
-            return `${parts[2]}/${parts[1]}/${parts[0]}`;
-        }
-        
-        // Format currency
-        function formatCurrency(value) {
-            if (value === null || value === undefined) {
-                return '-';
+        // Helper function to format date
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            
+            try {
+                const parts = dateStr.split('-');
+                if (parts.length !== 3) return dateStr;
+                
+                return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            } catch (e) {
+                return dateStr;
             }
-            return `$${parseFloat(value).toFixed(2)}`;
+        }
+        
+        // Helper function to format currency
+        function formatCurrency(value) {
+            if (value == null || value === '') return '-';
+            
+            try {
+                const numValue = parseFloat(value);
+                return numValue.toLocaleString('es-MX', {
+                    style: 'currency',
+                    currency: 'MXN',
+                    minimumFractionDigits: 2
+                });
+            } catch (e) {
+                return value;
+            }
         }
     });
 </script>
