@@ -6,6 +6,7 @@ DROP TABLE IF EXISTS RecepcionesCocina;
 DROP TABLE IF EXISTS AjustesInventario;
 DROP TABLE IF EXISTS Usuarios;
 DROP TABLE IF EXISTS LoginAttempts;
+DROP TABLE IF EXISTS RecibosImportados;
 
 CREATE TABLE Ingredientes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,6 +54,13 @@ CREATE TABLE Ventas (
     costo_estimado REAL,
     ganancia_estimada REAL,
     porcentaje_ganancia REAL
+);
+
+CREATE TABLE RecibosImportados (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    numero_recibo TEXT NOT NULL UNIQUE,
+    fecha_importacion TEXT NOT NULL,
+    fecha_recibo TEXT NOT NULL
 );
 
 CREATE TABLE RecepcionesCocina (

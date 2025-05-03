@@ -239,7 +239,7 @@ def importar_recibos():
     Import sales data from receipts in a CSV file.
     
     Expected request:
-    - file: CSV file with receipts data containing 'Fecha' and 'Descripción' columns
+    - file: CSV file with receipts data containing 'Fecha', 'Descripción', and optionally 'Recibo' columns
     
     Returns:
     - JSON response with import results
@@ -272,8 +272,13 @@ def importar_recibos():
         if not sales_by_date:
             return jsonify({"success": False, "error": "No valid sales data found in the CSV"}), 400
         
+        # Get receipt data for duplicate checking
+        receipts_data = parse_result.get("receipts", {})
+        
         # Debug log
         current_app.logger.info(f"Parsed sales data: {json.dumps(sales_by_date)}")
+        if receipts_data:
+            current_app.logger.info(f"Parsed receipts: {json.dumps(receipts_data)}")
         
         # Process and save the data to the database
         db = get_db()
@@ -282,17 +287,39 @@ def importar_recibos():
         # Initialize counters
         inserted_count = 0
         created_articles_count = 0
+        skipped_receipts = 0
         errors = []
         dates_imported = []
+        existing_receipts = []
+        
+        # Get current timestamp for receipt import tracking
+        current_timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Check for existing receipt numbers using the dedicated RecibosImportados table
+        receipt_numbers = list(filter(None, receipts_data.keys()))
+        if receipt_numbers:
+            placeholders = ', '.join(['?' for _ in receipt_numbers])
+            cursor.execute(
+                f"SELECT numero_recibo FROM RecibosImportados WHERE numero_recibo IN ({placeholders})",
+                receipt_numbers
+            )
+            existing_receipt_rows = cursor.fetchall()
+            existing_receipts = [row['numero_recibo'] for row in existing_receipt_rows] if existing_receipt_rows else []
+            
+            current_app.logger.info(f"Found existing receipts: {existing_receipts}")
         
         # Begin transaction
         cursor.execute("BEGIN TRANSACTION")
         
         try:
+            # Crear un diccionario para rastrear recibos procesados en esta importación
+            processed_receipts = {}
+            
             for date_str, products in sales_by_date.items():
                 # Convert date format from DD/MM/YY to YYYY-MM-DD
                 formatted_date = format_date(date_str)
-                dates_imported.append(formatted_date)
+                if formatted_date not in dates_imported:
+                    dates_imported.append(formatted_date)
                 
                 # Debug log
                 current_app.logger.info(f"Processing date: {date_str} -> {formatted_date}")
@@ -313,6 +340,31 @@ def importar_recibos():
                         # Debug log
                         current_app.logger.info(f"Processing product: {product_name} (variant: {variant}) - quantity: {quantity}")
                         
+                        # Find the receipt number for this product if available
+                        receipt_number = None
+                        if receipts_data:
+                            # Find the receipt that contains this product on this date
+                            for num, data in receipts_data.items():
+                                if data['date'] == date_str and product_key in data['items']:
+                                    receipt_number = num
+                                    break
+                        
+                        # Skip if this receipt has already been processed (either previously or in this batch)
+                        if receipt_number:
+                            if receipt_number in existing_receipts:
+                                current_app.logger.info(f"Skipping already processed receipt from previous imports: {receipt_number}")
+                                # Solo incrementamos el contador una vez por recibo
+                                if receipt_number not in processed_receipts:
+                                    skipped_receipts += 1
+                                    processed_receipts[receipt_number] = "skipped"
+                                continue
+                            elif receipt_number in processed_receipts:
+                                # Este recibo ya fue procesado en esta importación (otro producto del mismo recibo)
+                                current_app.logger.info(f"Continuing with receipt already processed in this batch: {receipt_number}")
+                            else:
+                                # Primera vez que vemos este recibo en esta importación
+                                processed_receipts[receipt_number] = "processing"
+                        
                         # Check if the article exists
                         cursor.execute(
                             "SELECT id, precio_venta, categoria FROM ArticulosVendidos WHERE nombre = ?",
@@ -320,29 +372,35 @@ def importar_recibos():
                         )
                         articulo_result = cursor.fetchone()
                         
+                        # Set default pricing information
+                        precio_unitario = 0
+                        categoria = None
+                        
+                        # If the article doesn't exist, create it
                         if not articulo_result:
-                            # Article doesn't exist, create it
-                            cursor.execute(
-                                """
-                                INSERT INTO ArticulosVendidos (nombre, categoria, precio_venta)
-                                VALUES (?, ?, ?)
-                                """,
-                                (product_name, "Sin categoría", 0)  # Default values
-                            )
-                            articulo_id = cursor.lastrowid
-                            precio_unitario = 0
-                            categoria = "Sin categoría"
-                            created_articles_count += 1
-                            
-                            # Log article creation
-                            current_app.logger.info(f"Created new article: {product_name} (ID: {articulo_id})")
+                            try:
+                                # Insert new article into ArticulosVendidos
+                                cursor.execute(
+                                    """
+                                    INSERT INTO ArticulosVendidos (nombre, categoria, precio_venta)
+                                    VALUES (?, ?, ?)
+                                    """,
+                                    (product_name, None, 0)
+                                )
+                                created_articles_count += 1
+                                
+                                # Log article creation
+                                current_app.logger.info(f"Created new article: {product_name}")
+                                
+                            except sqlite3.Error as e:
+                                current_app.logger.error(f"Error creating article {product_name}: {str(e)}")
+                                errors.append({
+                                    "product": product_name,
+                                    "error": f"Error creating article: {str(e)}"
+                                })
                         else:
-                            articulo_id = articulo_result[0]
-                            precio_unitario = articulo_result[1] or 0
-                            categoria = articulo_result[2] or "Sin categoría"
-                            
-                            # Debug log
-                            current_app.logger.info(f"Found existing article: {product_name} (ID: {articulo_id})")
+                            precio_unitario = articulo_result['precio_venta'] or 0
+                            categoria = articulo_result['categoria']
                         
                         # Prepare the sales data
                         sale_data = {
@@ -354,7 +412,7 @@ def importar_recibos():
                             'articulos_vendidos': quantity,
                             'precio_unitario': precio_unitario,
                             'total': precio_unitario * quantity,
-                            'ticket': None,  # These fields are not available in receipt data
+                            'ticket': receipt_number,  # Set the receipt number if available
                             'empleado': None,
                             'mesa': None,
                             'comensales': None,
@@ -377,43 +435,6 @@ def importar_recibos():
                             tuple(sale_data.values())
                         )
                         inserted_count += 1
-                        
-                        # Update inventory based on composition
-                        cursor.execute(
-                            """
-                            SELECT ca.ingrediente_id, ca.cantidad, i.nombre
-                            FROM ComposicionArticulo ca
-                            JOIN Ingredientes i ON ca.ingrediente_id = i.id
-                            WHERE ca.articulo_id = ?
-                            """,
-                            (articulo_id,)
-                        )
-                        composition = cursor.fetchall()
-                        
-                        # If composition exists, update inventory
-                        if composition:
-                            # Update inventory for each ingredient
-                            for comp_row in composition:
-                                ingrediente_id = comp_row[0]
-                                cantidad_por_unidad = comp_row[1]
-                                ingrediente_nombre = comp_row[2]
-                                
-                                # Calculate total quantity to reduce
-                                cantidad_reducir = cantidad_por_unidad * quantity
-                                
-                                # Update the ingredient quantity
-                                cursor.execute(
-                                    """
-                                    UPDATE Ingredientes
-                                    SET cantidad_actual = cantidad_actual - ?
-                                    WHERE id = ?
-                                    """,
-                                    (cantidad_reducir, ingrediente_id)
-                                )
-                                
-                                current_app.logger.info(
-                                    f"Updated ingredient {ingrediente_nombre}: reduced by {cantidad_reducir}"
-                                )
                     
                     except sqlite3.Error as e:
                         current_app.logger.error(f"Error processing product {product_key}: {str(e)}")
@@ -421,6 +442,26 @@ def importar_recibos():
                             "product": product_key,
                             "error": f"Error: {str(e)}"
                         })
+            
+            # Register all successfully processed receipts in the RecibosImportados table
+            for receipt_number, status in processed_receipts.items():
+                if status == "processing" and receipt_number:
+                    # Get the receipt date from the receipts_data
+                    receipt_date = None
+                    for num, data in receipts_data.items():
+                        if num == receipt_number:
+                            receipt_date = format_date(data['date'])
+                            break
+                    
+                    if receipt_date:
+                        try:
+                            cursor.execute(
+                                "INSERT INTO RecibosImportados (numero_recibo, fecha_importacion, fecha_recibo) VALUES (?, ?, ?)",
+                                (receipt_number, current_timestamp, receipt_date)
+                            )
+                            current_app.logger.info(f"Registered processed receipt: {receipt_number}")
+                        except sqlite3.Error as e:
+                            current_app.logger.error(f"Error registering receipt {receipt_number}: {str(e)}")
             
             # Commit the transaction if no errors
             db.commit()
@@ -439,6 +480,7 @@ def importar_recibos():
                 "message": "Receipts data imported successfully",
                 "inserted_count": inserted_count,
                 "created_articles_count": created_articles_count,
+                "skipped_receipts": skipped_receipts,
                 "errors": errors if errors else None,
                 "dates_imported": dates_imported,
                 "sales_verification": sales_check
@@ -453,6 +495,66 @@ def importar_recibos():
     except Exception as e:
         current_app.logger.error(f"Error in import receipts endpoint: {str(e)}")
         return handle_error(e, "Error importing receipts data")
+
+@bp.route('/recibos-importados', methods=['GET'])
+def get_recibos_importados():
+    """
+    Get a list of all imported receipts.
+    
+    Query parameters:
+    - fecha_inicio: Start date (YYYY-MM-DD)
+    - fecha_fin: End date (YYYY-MM-DD)
+    
+    Returns:
+    - JSON response with imported receipts data
+    """
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        
+        # Base query
+        query = "SELECT * FROM RecibosImportados WHERE 1=1"
+        params = []
+        
+        # Apply filters
+        if 'fecha_inicio' in request.args:
+            query += " AND fecha_recibo >= ?"
+            params.append(request.args['fecha_inicio'])
+        
+        if 'fecha_fin' in request.args:
+            query += " AND fecha_recibo <= ?"
+            params.append(request.args['fecha_fin'])
+        
+        # Add sorting
+        query += " ORDER BY fecha_importacion DESC"
+        
+        # Execute the query
+        cursor.execute(query, params)
+        recibos = cursor.fetchall()
+        
+        # Convert to list of dictionaries
+        result = []
+        for recibo in recibos:
+            result.append({
+                'id': recibo['id'],
+                'numero_recibo': recibo['numero_recibo'],
+                'fecha_importacion': recibo['fecha_importacion'],
+                'fecha_recibo': recibo['fecha_recibo']
+            })
+        
+        # Get total count
+        cursor.execute("SELECT COUNT(*) as count FROM RecibosImportados")
+        total = cursor.fetchone()['count']
+        
+        return jsonify({
+            "success": True,
+            "data": result,
+            "total": total
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error getting imported receipts: {str(e)}")
+        return handle_error(e, "Error retrieving imported receipts data")
 
 @bp.route('', methods=['GET'])
 def get_ventas():

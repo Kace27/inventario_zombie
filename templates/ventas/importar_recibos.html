@@ -94,6 +94,13 @@
         margin-right: 10px;
         min-width: 40px;
     }
+    .badge-warning {
+        background-color: #f0ad4e;
+        color: white;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 0.8em;
+    }
 </style>
 {% endblock %}
 
@@ -105,11 +112,14 @@
         <h3>Formato Esperado del CSV</h3>
         <p>El archivo CSV debe contener al menos las siguientes columnas:</p>
         <ul>
-            <li><strong>Fecha</strong>: La fecha del recibo (formato DD/MM/YY)</li>
+            <li><strong>Fecha</strong>: La fecha del recibo (formato DD/MM/YY o DD/MM/YY HH:MM)</li>
             <li><strong>Descripción</strong>: Descripción del recibo que incluye productos en formato "Cantidad x Producto (Variante)"</li>
+            <li><strong>Número de recibo</strong>: Identificador único del recibo (por ejemplo: 4-3568)</li>
         </ul>
         <p>Ejemplo de contenido en la columna Descripción:</p>
-        <code>2 x Café Americano (Grande), 1 x Pastel (Chocolate)</code>
+        <code>3 x Malteada (Chicle), 1 x Costillas (Bufalo), 2 x Hamburguesa</code>
+        <p><strong>Nota:</strong> El sistema verifica automáticamente si un recibo ya ha sido procesado mediante su número único, evitando importaciones duplicadas.</p>
+        <p><strong>Importante:</strong> Para que el sistema evite importar recibos duplicados, es necesario que cada recibo tenga un número identificador único en la columna "Número de recibo". Esta verificación es robusta y guarda permanentemente todos los recibos procesados para evitar que se resten del inventario dos veces.</p>
     </div>
     
     <div class="file-upload-area" id="dropZone">
@@ -348,7 +358,14 @@
                 importButton.innerHTML = 'Importar datos';
                 
                 if (data.success) {
-                    showStatus('success', 'Importación completada', `Se importaron ${data.inserted_count} registros de ventas. Se crearon ${data.created_articles_count} nuevos artículos.`);
+                    let statusMessage = `Se importaron ${data.inserted_count} registros de ventas. Se crearon ${data.created_articles_count} nuevos artículos.`;
+                    
+                    // Add info about skipped receipts if any
+                    if (data.skipped_receipts > 0) {
+                        statusMessage += ` Se omitieron ${data.skipped_receipts} recibos duplicados.`;
+                    }
+                    
+                    showStatus('success', 'Importación completada', statusMessage);
                     
                     // Show the imported data summary
                     showImportResults(data);
@@ -383,6 +400,17 @@
                 <p>Artículos importados: ${data.inserted_count}</p>
                 <p>Nuevos artículos creados: ${data.created_articles_count}</p>
             `;
+            
+            // Show skipped receipts if any
+            if (data.skipped_receipts > 0) {
+                resultsHTML += `
+                    <div class="alert alert-warning">
+                        <strong>Recibos omitidos: ${data.skipped_receipts}</strong>
+                        <p>Se detectaron recibos que ya habían sido procesados anteriormente y fueron omitidos para evitar duplicados.</p>
+                        <p>Esta funcionalidad impide que los productos se resten del inventario múltiples veces.</p>
+                    </div>
+                `;
+            }
             
             // Show imported dates
             if (data.dates_imported && data.dates_imported.length > 0) {

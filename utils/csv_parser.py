@@ -116,20 +116,42 @@ def parse_receipts_data(file_content):
         # Dictionary to store sales data by date
         sales_by_date = defaultdict(lambda: defaultdict(int))
         
+        # Dictionary to track receipt numbers and their data
+        receipts_data = {}
+        
         # Decode the file content
         content = io.StringIO(file_content.decode('utf-8'))
         
         # Read the CSV file
         reader = csv.DictReader(content)
         
+        # Debug para mostrar los encabezados
+        headers = None
         for row in reader:
+            if not headers:
+                headers = list(row.keys())
+                current_app.logger.info(f"CSV Headers found: {headers}")
+            
             # Check if we have the required columns
             if 'Fecha' not in row or 'Descripción' not in row:
                 current_app.logger.error("CSV missing required columns: Fecha and/or Descripción")
                 return {"success": False, "error": "CSV debe contener las columnas 'Fecha' y 'Descripción'"}
             
-            date_str = row['Fecha'].split()[0]  # Extract just the date part (01/05/25)
+            # Get date string - handle format with or without time
+            date_str = row['Fecha']
+            if ' ' in date_str:  # Format like "01/05/25 21:38"
+                date_str = date_str.split()[0]  # Extract just the date part
+            
             description = row['Descripción']
+            
+            # Try to get receipt number from different possible column names
+            receipt_number = None
+            if 'Número de recibo' in row:
+                receipt_number = row['Número de recibo']
+            elif 'Recibo' in row:
+                receipt_number = row['Recibo']
+                
+            current_app.logger.info(f"Processing row with date: {date_str}, receipt: {receipt_number}")
             
             # Skip if no description
             if not description:
@@ -138,6 +160,19 @@ def parse_receipts_data(file_content):
             # Extract items using regex
             # Pattern matches: quantity x product (variant)
             items = re.findall(r'(\d+) x ([^(,]+)(?:\s*\(([^)]+)\))?', description)
+            
+            if not items:
+                current_app.logger.warning(f"No items found in description: {description}")
+                continue
+            
+            # Store the receipt data for duplicate checking
+            if receipt_number:
+                if receipt_number not in receipts_data:
+                    receipts_data[receipt_number] = {
+                        'date': date_str,
+                        'items': {}
+                    }
+                    current_app.logger.info(f"Created receipt tracking for: {receipt_number}")
             
             for quantity, product, variant in items:
                 product = product.strip()
@@ -148,13 +183,25 @@ def parse_receipts_data(file_content):
                 
                 # Add to the count for this date and product
                 sales_by_date[date_str][product_key] += int(quantity)
+                
+                # Also store in receipts_data if we have a receipt number
+                if receipt_number:
+                    if product_key not in receipts_data[receipt_number]['items']:
+                        receipts_data[receipt_number]['items'][product_key] = 0
+                    receipts_data[receipt_number]['items'][product_key] += int(quantity)
         
         # Convert defaultdict to regular dict for JSON serialization
         result_data = {
             date: dict(products) for date, products in sales_by_date.items()
         }
         
-        return {"success": True, "data": result_data}
+        current_app.logger.info(f"Parsed {len(result_data)} dates and {len(receipts_data)} unique receipts")
+        
+        return {
+            "success": True, 
+            "data": result_data,
+            "receipts": receipts_data  # Include receipt data for duplicate checking
+        }
     
     except Exception as e:
         current_app.logger.error(f"Error parsing receipts data: {str(e)}")
