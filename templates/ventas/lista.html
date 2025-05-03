@@ -4,28 +4,6 @@
 
 {% block head %}
 <style>
-    .filter-container {
-        margin-bottom: 20px;
-        padding: 15px;
-        background-color: #f9f9f9;
-        border-radius: 4px;
-        border: 1px solid #ddd;
-    }
-    .filter-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 15px;
-        margin-bottom: 10px;
-    }
-    .filter-item {
-        flex: 1;
-        min-width: 200px;
-    }
-    .filter-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 10px;
-    }
     .detail-modal {
         display: none;
         position: fixed;
@@ -64,26 +42,30 @@
         font-weight: bold;
         margin-bottom: 5px;
     }
-    .receipts-by-date {
+    .receipts-container {
         margin-top: 20px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
     }
-    .date-header {
+    .receipt-header {
         background-color: #f5f5f5;
         padding: 10px 15px;
         border-bottom: 1px solid #ddd;
         cursor: pointer;
         font-weight: bold;
+        border-radius: 4px 4px 0 0;
+        border: 1px solid #ddd;
     }
-    .date-header:hover {
+    .receipt-header:hover {
         background-color: #eee;
     }
-    .date-content {
+    .receipt-content {
         padding: 0 15px;
         display: none;
+        border: 1px solid #ddd;
+        border-top: none;
+        border-radius: 0 0 4px 4px;
+        margin-bottom: 10px;
     }
-    .date-content.open {
+    .receipt-content.open {
         display: block;
     }
     .receipt-item {
@@ -145,9 +127,6 @@
         .detail-grid {
             grid-template-columns: 1fr;
         }
-        .filter-item {
-            min-width: 100%;
-        }
     }
 </style>
 {% endblock %}
@@ -163,39 +142,9 @@
         </div>
     </div>
     
-    <div class="filter-container">
-        <h3>Filtros</h3>
-        <form id="filterForm">
-            <div class="filter-row">
-                <div class="filter-item">
-                    <label for="fecha_inicio">Fecha inicio:</label>
-                    <input type="date" id="fecha_inicio" name="fecha_inicio" class="form-control">
-                </div>
-                <div class="filter-item">
-                    <label for="fecha_fin">Fecha fin:</label>
-                    <input type="date" id="fecha_fin" name="fecha_fin" class="form-control">
-                </div>
-            </div>
-            <div class="filter-row">
-                <div class="filter-item">
-                    <label for="articulo">Artículo:</label>
-                    <input type="text" id="articulo" name="articulo" class="form-control" placeholder="Buscar por nombre de artículo">
-                </div>
-                <div class="filter-item">
-                    <label for="variante">Variante:</label>
-                    <input type="text" id="variante" name="subcategoria" class="form-control" placeholder="Buscar por variante">
-                </div>
-            </div>
-            <div class="filter-actions">
-                <button type="button" id="clearFiltersBtn" class="btn btn-secondary">Limpiar filtros</button>
-                <button type="submit" class="btn btn-primary">Aplicar filtros</button>
-            </div>
-        </form>
-    </div>
-    
     <div id="salesContainer">
         <div class="loading" id="loadingIndicator">Cargando datos...</div>
-        <div id="salesByDate">
+        <div id="salesByReceipt" class="receipts-container">
             <!-- Filled by JavaScript -->
         </div>
         <div id="noResultsMessage" style="display: none; text-align: center; padding: 20px; margin-top: 30px; background-color: #f8f9fa; border-radius: 5px; border: 1px solid #dee2e6;">
@@ -221,10 +170,8 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // DOM elements
-        const filterForm = document.getElementById('filterForm');
-        const clearFiltersBtn = document.getElementById('clearFiltersBtn');
         const salesContainer = document.getElementById('salesContainer');
-        const salesByDate = document.getElementById('salesByDate');
+        const salesByReceipt = document.getElementById('salesByReceipt');
         const loadingIndicator = document.getElementById('loadingIndicator');
         const noResultsMessage = document.getElementById('noResultsMessage');
         
@@ -239,17 +186,6 @@
         
         // Initialize page
         loadSalesData();
-        
-        // Event listeners
-        filterForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            loadSalesData();
-        });
-        
-        clearFiltersBtn.addEventListener('click', function() {
-            filterForm.reset();
-            loadSalesData();
-        });
         
         // Modal close button
         detailModalClose.addEventListener('click', function() {
@@ -267,26 +203,15 @@
         function loadSalesData() {
             showLoading(true);
             
-            // Build query parameters
-            const params = new URLSearchParams();
-            
-            // Add filters from form
-            const formData = new FormData(filterForm);
-            for (const [key, value] of formData.entries()) {
-                if (value) {
-                    params.append(key, value);
-                }
-            }
-            
-            // Fetch data from API
-            fetch(`/api/ventas?${params.toString()}`)
+            // Fetch data from API without any filters
+            fetch('/api/ventas')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         salesData = data.data;
                         
-                        // Group by date
-                        salesGrouped = groupSalesByDate(salesData);
+                        // Group by receipt number
+                        salesGrouped = groupSalesByReceipt(salesData);
                         
                         renderSales();
                     } else {
@@ -301,15 +226,25 @@
                 });
         }
         
-        // Group sales by date
-        function groupSalesByDate(sales) {
+        // Group sales by receipt number (ticket)
+        function groupSalesByReceipt(sales) {
             const grouped = {};
             
             sales.forEach(sale => {
-                if (!grouped[sale.fecha]) {
-                    grouped[sale.fecha] = [];
+                if (!sale.ticket) return; // Skip sales without ticket number
+                
+                if (!grouped[sale.ticket]) {
+                    grouped[sale.ticket] = {
+                        ticket: sale.ticket,
+                        fecha: sale.fecha,
+                        hora: sale.hora,
+                        items: [],
+                        totalArticulos: 0
+                    };
                 }
-                grouped[sale.fecha].push(sale);
+                
+                grouped[sale.ticket].items.push(sale);
+                grouped[sale.ticket].totalArticulos += parseInt(sale.articulos_vendidos || 0, 10);
             });
             
             return grouped;
@@ -318,67 +253,71 @@
         // Render sales
         function renderSales() {
             // Clear container
-            salesByDate.innerHTML = '';
+            salesByReceipt.innerHTML = '';
             
             // Check if there's any data at all
             if (!salesData || salesData.length === 0 || Object.keys(salesGrouped).length === 0) {
-                salesByDate.style.display = 'none';
+                salesByReceipt.style.display = 'none';
                 noResultsMessage.style.display = 'block';
                 return;
             }
             
-            salesByDate.style.display = 'block';
+            salesByReceipt.style.display = 'block';
             noResultsMessage.style.display = 'none';
             
-            // Sort dates in descending order
-            const sortedDates = Object.keys(salesGrouped).sort().reverse();
+            // Sort tickets by date (newest first)
+            const sortedTickets = Object.values(salesGrouped).sort((a, b) => {
+                // Sort by date descending
+                const dateA = new Date(a.fecha.split('-').reverse().join('-'));
+                const dateB = new Date(b.fecha.split('-').reverse().join('-'));
+                return dateB - dateA;
+            });
             
-            // Create date sections
-            sortedDates.forEach(date => {
-                const sales = salesGrouped[date];
+            // Create receipt sections
+            sortedTickets.forEach(receipt => {
+                // Create receipt section
+                const receiptSection = document.createElement('div');
+                receiptSection.className = 'receipt-section';
                 
-                // Count total items for this date
-                const totalItems = sales.reduce((sum, sale) => sum + parseInt(sale.articulos_vendidos || 0, 10), 0);
+                // Format date
+                const formattedDate = formatDate(receipt.fecha);
                 
-                // Create date header
-                const dateSection = document.createElement('div');
-                dateSection.className = 'receipts-by-date';
-                
-                const dateHeader = document.createElement('div');
-                dateHeader.className = 'date-header';
-                dateHeader.innerHTML = `
-                    ${formatDate(date)} <span class="badge badge-success">${totalItems} artículos</span>
+                // Create receipt header
+                const receiptHeader = document.createElement('div');
+                receiptHeader.className = 'receipt-header';
+                receiptHeader.innerHTML = `
+                    Recibo #${receipt.ticket} - ${formattedDate} ${receipt.hora || ''} <span class="badge badge-success">${receipt.totalArticulos} artículos</span>
                 `;
                 
-                // Create date content
-                const dateContent = document.createElement('div');
-                dateContent.className = 'date-content';
+                // Create receipt content
+                const receiptContent = document.createElement('div');
+                receiptContent.className = 'receipt-content';
                 
-                // Group sales by articulo and subcategoria
+                // Group items by articulo and subcategoria
                 const groupedByProduct = {};
-                sales.forEach(sale => {
-                    const key = `${sale.articulo}|${sale.subcategoria || 'Sin variante'}`;
+                receipt.items.forEach(item => {
+                    const key = `${item.articulo}|${item.subcategoria || 'Sin variante'}`;
                     if (!groupedByProduct[key]) {
                         groupedByProduct[key] = {
-                            articulo: sale.articulo,
-                            subcategoria: sale.subcategoria || 'Sin variante',
+                            articulo: item.articulo,
+                            subcategoria: item.subcategoria || 'Sin variante',
                             cantidad: 0,
-                            precio_unitario: sale.precio_unitario,
+                            precio_unitario: item.precio_unitario,
                             total: 0,
-                            detalle: sale // Keep a reference to one of the sale records for detail view
+                            detalle: item // Keep a reference to one of the sale records for detail view
                         };
                     }
-                    groupedByProduct[key].cantidad += parseInt(sale.articulos_vendidos || 0, 10);
-                    groupedByProduct[key].total += parseFloat(sale.total || 0);
+                    groupedByProduct[key].cantidad += parseInt(item.articulos_vendidos || 0, 10);
+                    groupedByProduct[key].total += parseFloat(item.total || 0);
                 });
                 
                 // Sort by quantity sold (descending)
                 const sortedProducts = Object.values(groupedByProduct).sort((a, b) => b.cantidad - a.cantidad);
                 
-                // Add sales items
+                // Add product items
                 sortedProducts.forEach(product => {
-                    const receiptItem = document.createElement('div');
-                    receiptItem.className = 'receipt-item';
+                    const productItem = document.createElement('div');
+                    productItem.className = 'receipt-item';
                     
                     // Format price if available
                     const priceHtml = product.precio_unitario > 0 
@@ -390,27 +329,27 @@
                         ? `<span class="variant-tag">${product.subcategoria}</span>` 
                         : '';
                     
-                    receiptItem.innerHTML = `
+                    productItem.innerHTML = `
                         <strong>${product.cantidad} ×</strong> ${product.articulo} ${variantHtml} ${priceHtml}
                     `;
                     
                     // Add click event to show details
-                    receiptItem.addEventListener('click', () => {
+                    productItem.addEventListener('click', () => {
                         showSaleDetail(product.detalle);
                     });
                     
-                    dateContent.appendChild(receiptItem);
+                    receiptContent.appendChild(productItem);
                 });
                 
-                // Add click event to toggle date content
-                dateHeader.addEventListener('click', () => {
-                    dateContent.classList.toggle('open');
+                // Add click event to toggle receipt content
+                receiptHeader.addEventListener('click', () => {
+                    receiptContent.classList.toggle('open');
                 });
                 
                 // Append elements
-                dateSection.appendChild(dateHeader);
-                dateSection.appendChild(dateContent);
-                salesByDate.appendChild(dateSection);
+                receiptSection.appendChild(receiptHeader);
+                receiptSection.appendChild(receiptContent);
+                salesByReceipt.appendChild(receiptSection);
             });
         }
         

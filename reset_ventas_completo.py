@@ -68,20 +68,28 @@ def reset_ventas_direct():
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
-        # Obtener el número actual de registros
+        # Obtener el número actual de registros en Ventas
         cursor.execute("SELECT COUNT(*) FROM Ventas")
-        count = cursor.fetchone()[0]
+        count_ventas = cursor.fetchone()[0]
         
-        if count == 0:
-            print("La tabla de ventas ya está vacía en la base de datos.")
+        # Obtener el número actual de registros en RecibosImportados
+        cursor.execute("SELECT COUNT(*) FROM RecibosImportados")
+        count_recibos = cursor.fetchone()[0]
+        
+        if count_ventas == 0 and count_recibos == 0:
+            print("Las tablas Ventas y RecibosImportados ya están vacías en la base de datos.")
             conn.close()
             return True
         
-        # Eliminar todos los registros
+        # Eliminar todos los registros de Ventas
         cursor.execute("DELETE FROM Ventas")
+        
+        # Eliminar todos los registros de RecibosImportados
+        cursor.execute("DELETE FROM RecibosImportados")
         
         # Reiniciar el autoincremento
         cursor.execute("DELETE FROM sqlite_sequence WHERE name='Ventas'")
+        cursor.execute("DELETE FROM sqlite_sequence WHERE name='RecibosImportados'")
         
         # Vaciar cache de SQLite
         cursor.execute("PRAGMA optimize")
@@ -89,7 +97,7 @@ def reset_ventas_direct():
         # Confirmar los cambios
         conn.commit()
         
-        print(f"Se han eliminado {count} registros de ventas de la base de datos SQLite.")
+        print(f"Se han eliminado {count_ventas} registros de ventas y {count_recibos} registros de recibos importados de la base de datos SQLite.")
         conn.close()
         return True
         
@@ -164,7 +172,7 @@ def crear_endpoint_reset():
 @bp.route('/reset', methods=['POST'])
 def reset_ventas():
     \"\"\"
-    Resetea todas las ventas en la base de datos.
+    Resetea todas las ventas y registros de recibos importados en la base de datos.
     Solo para uso en desarrollo y depuración.
     \"\"\"
     try:
@@ -173,20 +181,31 @@ def reset_ventas():
         
         # Contar registros antes de eliminar
         cursor.execute("SELECT COUNT(*) as count FROM Ventas")
-        count = cursor.fetchone()['count']
+        count_ventas = cursor.fetchone()['count']
         
-        # Eliminar todos los registros
+        # Contar recibos importados
+        cursor.execute("SELECT COUNT(*) as count FROM RecibosImportados")
+        count_recibos = cursor.fetchone()['count']
+        
+        # Eliminar todos los registros de ventas
         cursor.execute("DELETE FROM Ventas")
+        
+        # Eliminar todos los recibos importados
+        cursor.execute("DELETE FROM RecibosImportados")
         
         # Reiniciar el autoincremento
         cursor.execute("DELETE FROM sqlite_sequence WHERE name='Ventas'")
+        cursor.execute("DELETE FROM sqlite_sequence WHERE name='RecibosImportados'")
+        
+        # Vaciar cache de SQLite
+        cursor.execute("PRAGMA optimize")
         
         # Confirmar cambios
         db.commit()
         
         return jsonify({
             "success": True,
-            "message": f"Se han eliminado {count} registros de ventas."
+            "message": f"Se han eliminado {count_ventas} registros de ventas y {count_recibos} recibos importados."
         })
         
     except Exception as e:
@@ -224,21 +243,25 @@ def vaciar_db_completo():
         conn_orig = sqlite3.connect(DB_PATH)
         conn_new = sqlite3.connect(temp_db)
         
-        # Obtener el esquema de todas las tablas excepto Ventas
+        # Obtener el esquema de todas las tablas excepto Ventas y RecibosImportados
         cursor = conn_orig.cursor()
-        cursor.execute("SELECT name, sql FROM sqlite_master WHERE type='table' AND name != 'Ventas'")
+        cursor.execute("SELECT name, sql FROM sqlite_master WHERE type='table' AND name NOT IN ('Ventas', 'RecibosImportados')")
         tables = cursor.fetchall()
         
         # Obtener el esquema de la tabla Ventas (para crearla vacía)
         cursor.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='Ventas'")
         ventas_schema = cursor.fetchone()[0]
         
+        # Obtener el esquema de la tabla RecibosImportados (para crearla vacía)
+        cursor.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='RecibosImportados'")
+        recibos_schema = cursor.fetchone()[0]
+        
         # Crear todas las tablas en la nueva base de datos
         cursor_new = conn_new.cursor()
         for table_name, table_sql in tables:
             cursor_new.execute(table_sql)
             
-            # Copiar datos de todas las tablas excepto Ventas
+            # Copiar datos de todas las tablas excepto Ventas y RecibosImportados
             cursor.execute(f"SELECT * FROM {table_name}")
             rows = cursor.fetchall()
             
@@ -255,6 +278,9 @@ def vaciar_db_completo():
         # Crear la tabla Ventas vacía
         cursor_new.execute(ventas_schema)
         
+        # Crear la tabla RecibosImportados vacía
+        cursor_new.execute(recibos_schema)
+        
         # Guardar cambios
         conn_new.commit()
         
@@ -266,7 +292,7 @@ def vaciar_db_completo():
         os.remove(DB_PATH)
         os.rename(temp_db, DB_PATH)
         
-        print("Base de datos recreada exitosamente con tabla Ventas vacía.")
+        print("Base de datos recreada exitosamente con tablas Ventas y RecibosImportados vacías.")
         return True
         
     except Exception as e:
@@ -329,7 +355,7 @@ def main():
         
         # Solución más drástica: recrear base de datos
         if vaciar_db_completo():
-            print("Base de datos recreada exitosamente con tabla Ventas vacía.")
+            print("Base de datos recreada exitosamente con tablas Ventas y RecibosImportados vacías.")
         else:
             print("ERROR: Todos los métodos de reset han fallado.")
             print("Por favor, contacta al administrador del sistema.")

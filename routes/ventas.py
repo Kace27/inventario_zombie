@@ -266,19 +266,14 @@ def importar_recibos():
         if not parse_result["success"]:
             return jsonify({"success": False, "error": parse_result["error"]}), 400
         
-        # Get the parsed sales data by date
-        sales_by_date = parse_result["data"]
-        
-        if not sales_by_date:
-            return jsonify({"success": False, "error": "No valid sales data found in the CSV"}), 400
-        
-        # Get receipt data for duplicate checking
+        # Get receipts data
         receipts_data = parse_result.get("receipts", {})
         
+        if not receipts_data:
+            return jsonify({"success": False, "error": "No valid receipt data found in the CSV"}), 400
+        
         # Debug log
-        current_app.logger.info(f"Parsed sales data: {json.dumps(sales_by_date)}")
-        if receipts_data:
-            current_app.logger.info(f"Parsed receipts: {json.dumps(receipts_data)}")
+        current_app.logger.info(f"Parsed receipts: {json.dumps(receipts_data)}")
         
         # Process and save the data to the database
         db = get_db()
@@ -295,7 +290,7 @@ def importar_recibos():
         # Get current timestamp for receipt import tracking
         current_timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
-        # Check for existing receipt numbers using the dedicated RecibosImportados table
+        # Check for existing receipt numbers
         receipt_numbers = list(filter(None, receipts_data.keys()))
         if receipt_numbers:
             placeholders = ', '.join(['?' for _ in receipt_numbers])
@@ -312,22 +307,35 @@ def importar_recibos():
         cursor.execute("BEGIN TRANSACTION")
         
         try:
-            # Crear un diccionario para rastrear recibos procesados en esta importación
-            processed_receipts = {}
-            
-            for date_str, products in sales_by_date.items():
+            # Process receipts individually
+            for receipt_number, receipt_data in receipts_data.items():
+                # Skip if this receipt has already been processed
+                if receipt_number in existing_receipts:
+                    current_app.logger.info(f"Skipping already processed receipt: {receipt_number}")
+                    skipped_receipts += 1
+                    continue
+                
+                date_str = receipt_data['date']
+                time_str = receipt_data.get('time')
+                
                 # Convert date format from DD/MM/YY to YYYY-MM-DD
                 formatted_date = format_date(date_str)
                 if formatted_date not in dates_imported:
                     dates_imported.append(formatted_date)
                 
-                # Debug log
-                current_app.logger.info(f"Processing date: {date_str} -> {formatted_date}")
+                # Format time to ensure HH:MM:SS format
+                receipt_time = "12:00:00"  # Default time
+                if time_str:
+                    time_parts = time_str.split(':')
+                    if len(time_parts) == 2:  # HH:MM format
+                        receipt_time = f"{time_str}:00"
+                    else:
+                        receipt_time = time_str
                 
-                # Set a default time
-                default_time = "12:00:00"
+                current_app.logger.info(f"Processing receipt: {receipt_number}, date: {formatted_date}, time: {receipt_time}")
                 
-                for product_key, quantity in products.items():
+                # Process all items in this receipt
+                for product_key, quantity in receipt_data['items'].items():
                     try:
                         # Extract product name and variant
                         if "(" in product_key and ")" in product_key:
@@ -337,33 +345,7 @@ def importar_recibos():
                             product_name = product_key
                             variant = "Sin variante"
                         
-                        # Debug log
-                        current_app.logger.info(f"Processing product: {product_name} (variant: {variant}) - quantity: {quantity}")
-                        
-                        # Find the receipt number for this product if available
-                        receipt_number = None
-                        if receipts_data:
-                            # Find the receipt that contains this product on this date
-                            for num, data in receipts_data.items():
-                                if data['date'] == date_str and product_key in data['items']:
-                                    receipt_number = num
-                                    break
-                        
-                        # Skip if this receipt has already been processed (either previously or in this batch)
-                        if receipt_number:
-                            if receipt_number in existing_receipts:
-                                current_app.logger.info(f"Skipping already processed receipt from previous imports: {receipt_number}")
-                                # Solo incrementamos el contador una vez por recibo
-                                if receipt_number not in processed_receipts:
-                                    skipped_receipts += 1
-                                    processed_receipts[receipt_number] = "skipped"
-                                continue
-                            elif receipt_number in processed_receipts:
-                                # Este recibo ya fue procesado en esta importación (otro producto del mismo recibo)
-                                current_app.logger.info(f"Continuing with receipt already processed in this batch: {receipt_number}")
-                            else:
-                                # Primera vez que vemos este recibo en esta importación
-                                processed_receipts[receipt_number] = "processing"
+                        current_app.logger.info(f"  Processing product: {product_name} (variant: {variant}) - quantity: {quantity}")
                         
                         # Check if the article exists
                         cursor.execute(
@@ -379,7 +361,6 @@ def importar_recibos():
                         # If the article doesn't exist, create it
                         if not articulo_result:
                             try:
-                                # Insert new article into ArticulosVendidos
                                 cursor.execute(
                                     """
                                     INSERT INTO ArticulosVendidos (nombre, categoria, precio_venta)
@@ -388,10 +369,7 @@ def importar_recibos():
                                     (product_name, None, 0)
                                 )
                                 created_articles_count += 1
-                                
-                                # Log article creation
                                 current_app.logger.info(f"Created new article: {product_name}")
-                                
                             except sqlite3.Error as e:
                                 current_app.logger.error(f"Error creating article {product_name}: {str(e)}")
                                 errors.append({
@@ -405,14 +383,14 @@ def importar_recibos():
                         # Prepare the sales data
                         sale_data = {
                             'fecha': formatted_date,
-                            'hora': default_time,
+                            'hora': receipt_time,
                             'articulo': product_name,
                             'categoria': categoria,
                             'subcategoria': variant if variant != "Sin variante" else None,
                             'articulos_vendidos': quantity,
                             'precio_unitario': precio_unitario,
                             'total': precio_unitario * quantity,
-                            'ticket': receipt_number,  # Set the receipt number if available
+                            'ticket': receipt_number,
                             'empleado': None,
                             'mesa': None,
                             'comensales': None,
@@ -422,9 +400,6 @@ def importar_recibos():
                             'ganancia_estimada': None,
                             'porcentaje_ganancia': None
                         }
-                        
-                        # Debug log
-                        current_app.logger.info(f"Inserting sale with data: {json.dumps(sale_data)}")
                         
                         # Insert into Ventas table
                         columns = ', '.join(sale_data.keys())
@@ -442,26 +417,16 @@ def importar_recibos():
                             "product": product_key,
                             "error": f"Error: {str(e)}"
                         })
-            
-            # Register all successfully processed receipts in the RecibosImportados table
-            for receipt_number, status in processed_receipts.items():
-                if status == "processing" and receipt_number:
-                    # Get the receipt date from the receipts_data
-                    receipt_date = None
-                    for num, data in receipts_data.items():
-                        if num == receipt_number:
-                            receipt_date = format_date(data['date'])
-                            break
-                    
-                    if receipt_date:
-                        try:
-                            cursor.execute(
-                                "INSERT INTO RecibosImportados (numero_recibo, fecha_importacion, fecha_recibo) VALUES (?, ?, ?)",
-                                (receipt_number, current_timestamp, receipt_date)
-                            )
-                            current_app.logger.info(f"Registered processed receipt: {receipt_number}")
-                        except sqlite3.Error as e:
-                            current_app.logger.error(f"Error registering receipt {receipt_number}: {str(e)}")
+                
+                # Register the processed receipt
+                try:
+                    cursor.execute(
+                        "INSERT INTO RecibosImportados (numero_recibo, fecha_importacion, fecha_recibo) VALUES (?, ?, ?)",
+                        (receipt_number, current_timestamp, formatted_date)
+                    )
+                    current_app.logger.info(f"Registered processed receipt: {receipt_number}")
+                except sqlite3.Error as e:
+                    current_app.logger.error(f"Error registering receipt {receipt_number}: {str(e)}")
             
             # Commit the transaction if no errors
             db.commit()
@@ -653,7 +618,7 @@ def get_ventas():
 @bp.route('/reset', methods=['POST'])
 def reset_ventas():
     """
-    Resetea todas las ventas en la base de datos.
+    Resetea todas las ventas y registros de recibos importados en la base de datos.
     Solo para uso en desarrollo y depuración.
     """
     try:
@@ -662,13 +627,21 @@ def reset_ventas():
         
         # Contar registros antes de eliminar
         cursor.execute("SELECT COUNT(*) as count FROM Ventas")
-        count = cursor.fetchone()['count']
+        count_ventas = cursor.fetchone()['count']
         
-        # Eliminar todos los registros
+        # Contar recibos importados
+        cursor.execute("SELECT COUNT(*) as count FROM RecibosImportados")
+        count_recibos = cursor.fetchone()['count']
+        
+        # Eliminar todos los registros de ventas
         cursor.execute("DELETE FROM Ventas")
+        
+        # Eliminar todos los recibos importados
+        cursor.execute("DELETE FROM RecibosImportados")
         
         # Reiniciar el autoincremento
         cursor.execute("DELETE FROM sqlite_sequence WHERE name='Ventas'")
+        cursor.execute("DELETE FROM sqlite_sequence WHERE name='RecibosImportados'")
         
         # Vaciar cache de SQLite
         cursor.execute("PRAGMA optimize")
@@ -677,12 +650,13 @@ def reset_ventas():
         db.commit()
         
         # Log de la operación
-        current_app.logger.info(f"API: Se han eliminado {count} registros de ventas")
+        current_app.logger.info(f"API: Se han eliminado {count_ventas} registros de ventas y {count_recibos} recibos importados")
         
         return jsonify({
             "success": True,
-            "message": f"Se han eliminado {count} registros de ventas.",
-            "count": count
+            "message": f"Se han eliminado {count_ventas} registros de ventas y {count_recibos} recibos importados.",
+            "count_ventas": count_ventas,
+            "count_recibos": count_recibos
         })
         
     except Exception as e:

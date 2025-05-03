@@ -137,10 +137,18 @@ def parse_receipts_data(file_content):
                 current_app.logger.error("CSV missing required columns: Fecha and/or Descripción")
                 return {"success": False, "error": "CSV debe contener las columnas 'Fecha' y 'Descripción'"}
             
-            # Get date string - handle format with or without time
-            date_str = row['Fecha']
-            if ' ' in date_str:  # Format like "01/05/25 21:38"
-                date_str = date_str.split()[0]  # Extract just the date part
+            # Get date string and time if available
+            original_date_str = row['Fecha']
+            time_str = None
+            
+            # Extract time if present
+            if ' ' in original_date_str:  # Format like "01/05/25 21:38"
+                date_parts = original_date_str.split(' ', 1)
+                date_str = date_parts[0]  # Just the date part
+                if len(date_parts) > 1:
+                    time_str = date_parts[1]  # Time part
+            else:
+                date_str = original_date_str
             
             description = row['Descripción']
             
@@ -151,44 +159,56 @@ def parse_receipts_data(file_content):
             elif 'Recibo' in row:
                 receipt_number = row['Recibo']
                 
-            current_app.logger.info(f"Processing row with date: {date_str}, receipt: {receipt_number}")
+            current_app.logger.info(f"Processing row with date: {date_str}, time: {time_str}, receipt: {receipt_number}")
             
             # Skip if no description
             if not description:
                 continue
+            
+            # Initialize receipt data if this is a new receipt
+            if receipt_number and receipt_number not in receipts_data:
+                receipts_data[receipt_number] = {
+                    'date': date_str,
+                    'time': time_str,
+                    'items': {}
+                }
+                current_app.logger.info(f"Created receipt tracking for: {receipt_number}")
+            
+            # Split description into individual product entries using commas to separate items
+            product_entries = description.split(',')
+            
+            # Process each product entry
+            for entry in product_entries:
+                entry = entry.strip()
+                if not entry:
+                    continue
                 
-            # Extract items using regex
-            # Pattern matches: quantity x product (variant)
-            items = re.findall(r'(\d+) x ([^(,]+)(?:\s*\(([^)]+)\))?', description)
-            
-            if not items:
-                current_app.logger.warning(f"No items found in description: {description}")
-                continue
-            
-            # Store the receipt data for duplicate checking
-            if receipt_number:
-                if receipt_number not in receipts_data:
-                    receipts_data[receipt_number] = {
-                        'date': date_str,
-                        'items': {}
-                    }
-                    current_app.logger.info(f"Created receipt tracking for: {receipt_number}")
-            
-            for quantity, product, variant in items:
+                # Match format: "XX x Product" or "XX x Product (Variant)"
+                match = re.match(r'(\d+)\s*x\s*([^(]+)(?:\s*\(([^)]+)\))?', entry)
+                if not match:
+                    current_app.logger.warning(f"Could not parse product entry: '{entry}'")
+                    continue
+                
+                # Extract quantity, product name and variant
+                quantity_str, product, variant = match.groups()
+                quantity = int(quantity_str.strip())
                 product = product.strip()
                 variant = variant.strip() if variant else "Sin variante"
                 
                 # Create a key that combines product and variant
                 product_key = f"{product} ({variant})"
                 
+                # Log for debugging
+                current_app.logger.info(f"Extracted: Quantity={quantity}, Product={product}, Variant={variant}")
+                
                 # Add to the count for this date and product
-                sales_by_date[date_str][product_key] += int(quantity)
+                sales_by_date[date_str][product_key] += quantity
                 
                 # Also store in receipts_data if we have a receipt number
                 if receipt_number:
                     if product_key not in receipts_data[receipt_number]['items']:
                         receipts_data[receipt_number]['items'][product_key] = 0
-                    receipts_data[receipt_number]['items'][product_key] += int(quantity)
+                    receipts_data[receipt_number]['items'][product_key] += quantity
         
         # Convert defaultdict to regular dict for JSON serialization
         result_data = {
@@ -196,6 +216,12 @@ def parse_receipts_data(file_content):
         }
         
         current_app.logger.info(f"Parsed {len(result_data)} dates and {len(receipts_data)} unique receipts")
+        
+        # Log parsed receipt data for debugging
+        for receipt_num, receipt_data in receipts_data.items():
+            current_app.logger.info(f"Receipt {receipt_num} contains {len(receipt_data['items'])} unique product items:")
+            for product, qty in receipt_data['items'].items():
+                current_app.logger.info(f"  - {qty} × {product}")
         
         return {
             "success": True, 
