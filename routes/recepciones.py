@@ -252,4 +252,102 @@ def get_recepcion(id):
         })
         
     except Exception as e:
+        return handle_error(str(e))
+
+@bp.route('/<int:id>', methods=['DELETE'])
+def delete_recepcion(id):
+    """
+    Delete a specific kitchen reception by ID and adjust inventory accordingly.
+    
+    Path parameters:
+    - id: Reception ID
+    
+    Returns:
+    - JSON response with deletion result
+    """
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        
+        # Begin transaction
+        cursor.execute("BEGIN TRANSACTION")
+        
+        try:
+            # First, get the reception details to know what to remove from inventory
+            cursor.execute(
+                """
+                SELECT r.ingrediente_id, r.cantidad_recibida, i.nombre as ingrediente_nombre
+                FROM RecepcionesCocina r
+                JOIN Ingredientes i ON r.ingrediente_id = i.id
+                WHERE r.id = ?
+                """,
+                (id,)
+            )
+            recepcion = cursor.fetchone()
+            
+            if not recepcion:
+                db.rollback()
+                return jsonify({
+                    "success": False,
+                    "error": f"No existe la recepción con ID {id}"
+                }), 404
+            
+            # Check if removing this reception would result in negative inventory
+            cursor.execute(
+                """
+                SELECT cantidad_actual 
+                FROM Ingredientes 
+                WHERE id = ?
+                """,
+                (recepcion['ingrediente_id'],)
+            )
+            
+            ingrediente = cursor.fetchone()
+            
+            if not ingrediente:
+                db.rollback()
+                return jsonify({
+                    "success": False,
+                    "error": f"No existe el ingrediente con ID {recepcion['ingrediente_id']}"
+                }), 404
+            
+            nueva_cantidad = ingrediente['cantidad_actual'] - recepcion['cantidad_recibida']
+            
+            if nueva_cantidad < 0:
+                db.rollback()
+                return jsonify({
+                    "success": False,
+                    "error": f"No es posible eliminar esta recepción porque resultaría en inventario negativo para {recepcion['ingrediente_nombre']}. Cantidad actual: {ingrediente['cantidad_actual']}, Cantidad a eliminar: {recepcion['cantidad_recibida']}"
+                }), 400
+            
+            # Update ingredient inventory (subtract the received quantity)
+            cursor.execute(
+                """
+                UPDATE Ingredientes
+                SET cantidad_actual = cantidad_actual - ?
+                WHERE id = ?
+                """,
+                (recepcion['cantidad_recibida'], recepcion['ingrediente_id'])
+            )
+            
+            # Delete the reception record
+            cursor.execute("DELETE FROM RecepcionesCocina WHERE id = ?", (id,))
+            
+            # Commit the transaction
+            db.commit()
+            
+            # Return success response
+            return jsonify({
+                "success": True,
+                "message": f"Recepción ID {id} eliminada correctamente y inventario actualizado"
+            })
+            
+        except Exception as e:
+            # Rollback on error
+            db.rollback()
+            current_app.logger.error(f"Error al eliminar recepción: {str(e)}")
+            return jsonify({"success": False, "error": str(e)}), 500
+            
+    except Exception as e:
+        current_app.logger.error(f"Error general al eliminar recepción: {str(e)}")
         return handle_error(str(e)) 
