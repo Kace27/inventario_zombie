@@ -1,0 +1,391 @@
+{% extends "layout.html" %}
+
+{% block title %}Historial de Recepciones - Inventario Zombie{% endblock %}
+
+{% block head %}
+<style>
+    .filters-container {
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    
+    .date-filters {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .date-filters .form-group {
+        flex: 1;
+    }
+    
+    .filter-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .table-responsive {
+        border-radius: 0.5rem;
+        overflow: hidden;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    
+    .table th {
+        background-color: #f8f9fa;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+    
+    .card-header {
+        background-color: #4CAF50;
+        color: white;
+        font-weight: 500;
+    }
+    
+    #recepciones-table tbody tr:hover {
+        background-color: rgba(76, 175, 80, 0.1);
+    }
+    
+    .pagination {
+        margin-top: 1rem;
+        justify-content: center;
+    }
+    
+    .spinner-border {
+        display: none;
+        margin: 2rem auto;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+    }
+    
+    .empty-state i {
+        font-size: 3rem;
+        color: #ccc;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h3 mb-0">Historial de Recepciones</h1>
+            <p class="text-muted">Consulta todas las recepciones de ingredientes registradas en el sistema</p>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header py-3">
+            <h5 class="mb-0">Filtros</h5>
+        </div>
+        <div class="card-body">
+            <form id="filtros-form">
+                <div class="row">
+                    <div class="col-md-6 col-lg-3 mb-3">
+                        <label for="fecha-inicio" class="form-label">Fecha inicio</label>
+                        <input type="date" class="form-control" id="fecha-inicio" name="fecha_inicio">
+                    </div>
+                    <div class="col-md-6 col-lg-3 mb-3">
+                        <label for="fecha-fin" class="form-label">Fecha fin</label>
+                        <input type="date" class="form-control" id="fecha-fin" name="fecha_fin">
+                    </div>
+                    <div class="col-md-6 col-lg-3 mb-3">
+                        <label for="ingrediente" class="form-label">Ingrediente</label>
+                        <select class="form-select" id="ingrediente" name="ingrediente_id">
+                            <option value="">Todos los ingredientes</option>
+                            <!-- Opciones se cargarán dinámicamente -->
+                        </select>
+                    </div>
+                    <div class="col-md-6 col-lg-3 mb-3 d-flex align-items-end">
+                        <div class="d-grid gap-2 d-md-flex w-100">
+                            <button type="submit" class="btn btn-primary flex-grow-1">
+                                <i class="fas fa-search me-1"></i> Filtrar
+                            </button>
+                            <button type="button" id="reset-filters" class="btn btn-outline-secondary">
+                                <i class="fas fa-undo me-1"></i> Limpiar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Recepciones registradas</h5>
+            <span id="total-registros" class="badge bg-secondary"></span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table id="recepciones-table" class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Fecha</th>
+                            <th>Hora</th>
+                            <th>Ingrediente</th>
+                            <th>Cantidad</th>
+                            <th>Unidad</th>
+                            <th>Notas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Se llenará dinámicamente -->
+                    </tbody>
+                </table>
+                
+                <div id="spinner" class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+                
+                <div id="empty-state" class="empty-state d-none">
+                    <i class="fas fa-inbox"></i>
+                    <h5>No hay recepciones registradas</h5>
+                    <p class="text-muted">No se encontraron recepciones con los filtros aplicados</p>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer">
+            <nav>
+                <ul id="pagination" class="pagination justify-content-center">
+                    <!-- Se llenará dinámicamente -->
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Variables de paginación
+        const ITEMS_PER_PAGE = 10;
+        let currentPage = 1;
+        let totalItems = 0;
+        
+        // Elementos del DOM
+        const filtrosForm = document.getElementById('filtros-form');
+        const resetFiltersBtn = document.getElementById('reset-filters');
+        const ingredienteSelect = document.getElementById('ingrediente');
+        const recepcionesTable = document.getElementById('recepciones-table');
+        const tableBody = recepcionesTable.querySelector('tbody');
+        const spinner = document.getElementById('spinner');
+        const emptyState = document.getElementById('empty-state');
+        const totalRegistros = document.getElementById('total-registros');
+        const pagination = document.getElementById('pagination');
+        
+        // Cargar los filtros al iniciar la página
+        loadFilters();
+        
+        // Cargar los datos iniciales
+        loadRecepciones();
+        
+        // Event listeners
+        filtrosForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            currentPage = 1;
+            loadRecepciones();
+        });
+        
+        resetFiltersBtn.addEventListener('click', function() {
+            filtrosForm.reset();
+            currentPage = 1;
+            loadRecepciones();
+        });
+        
+        // Función para cargar los filtros
+        function loadFilters() {
+            // Cargar ingredientes
+            fetch('/api/ingredientes')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Ordenar ingredientes por nombre
+                        const ingredientes = data.data.sort((a, b) => a.nombre.localeCompare(b.nombre));
+                        
+                        // Limpiar opciones actuales
+                        ingredienteSelect.innerHTML = '<option value="">Todos los ingredientes</option>';
+                        
+                        // Agregar opciones
+                        ingredientes.forEach(ingrediente => {
+                            const option = document.createElement('option');
+                            option.value = ingrediente.id;
+                            option.textContent = ingrediente.nombre;
+                            ingredienteSelect.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => console.error('Error al cargar ingredientes:', error));
+                
+            // Establecer fechas predeterminadas (último mes)
+            const hoy = new Date();
+            const unMesAtras = new Date();
+            unMesAtras.setMonth(unMesAtras.getMonth() - 1);
+            
+            document.getElementById('fecha-fin').value = formatDate(hoy);
+            document.getElementById('fecha-inicio').value = formatDate(unMesAtras);
+        }
+        
+        // Función para cargar las recepciones
+        function loadRecepciones() {
+            // Mostrar spinner
+            spinner.style.display = 'block';
+            emptyState.classList.add('d-none');
+            tableBody.innerHTML = '';
+            
+            // Construir URL con parámetros de filtro
+            const formData = new FormData(filtrosForm);
+            const params = new URLSearchParams();
+            
+            formData.forEach((value, key) => {
+                if (value) params.append(key, value);
+            });
+            
+            // Añadir parámetros de paginación
+            params.append('limit', ITEMS_PER_PAGE);
+            params.append('offset', (currentPage - 1) * ITEMS_PER_PAGE);
+            
+            // Realizar la petición
+            fetch(`/api/recepciones?${params.toString()}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Ocultar spinner
+                    spinner.style.display = 'none';
+                    
+                    if (data.success) {
+                        totalItems = data.total;
+                        totalRegistros.textContent = `Total: ${totalItems}`;
+                        
+                        // Mostrar datos o estado vacío
+                        if (data.data.length === 0) {
+                            emptyState.classList.remove('d-none');
+                        } else {
+                            // Renderizar datos
+                            data.data.forEach(recepcion => {
+                                const row = document.createElement('tr');
+                                row.innerHTML = `
+                                    <td>${recepcion.id}</td>
+                                    <td>${formatDateDisplay(recepcion.fecha_recepcion)}</td>
+                                    <td>${recepcion.hora_recepcion}</td>
+                                    <td>${recepcion.ingrediente_nombre}</td>
+                                    <td>${recepcion.cantidad_recibida}</td>
+                                    <td>${recepcion.unidad_medida}</td>
+                                    <td>${recepcion.notas || '-'}</td>
+                                `;
+                                tableBody.appendChild(row);
+                            });
+                            
+                            // Actualizar paginación
+                            renderPagination();
+                        }
+                    } else {
+                        console.error('Error al cargar recepciones:', data.error);
+                        emptyState.classList.remove('d-none');
+                        document.querySelector('#empty-state p').textContent = 'Ocurrió un error al cargar los datos';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error de red:', error);
+                    spinner.style.display = 'none';
+                    emptyState.classList.remove('d-none');
+                    document.querySelector('#empty-state p').textContent = 'Error de conexión';
+                });
+        }
+        
+        // Función para renderizar la paginación
+        function renderPagination() {
+            pagination.innerHTML = '';
+            
+            if (totalItems <= ITEMS_PER_PAGE) return;
+            
+            const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+            
+            // Botón anterior
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+            const prevLink = document.createElement('a');
+            prevLink.className = 'page-link';
+            prevLink.href = '#';
+            prevLink.innerHTML = '&laquo;';
+            prevLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (currentPage > 1) {
+                    currentPage--;
+                    loadRecepciones();
+                }
+            });
+            prevLi.appendChild(prevLink);
+            pagination.appendChild(prevLi);
+            
+            // Páginas
+            let startPage = Math.max(1, currentPage - 2);
+            let endPage = Math.min(totalPages, startPage + 4);
+            
+            if (endPage - startPage < 4 && startPage > 1) {
+                startPage = Math.max(1, endPage - 4);
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                const pageLi = document.createElement('li');
+                pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                const pageLink = document.createElement('a');
+                pageLink.className = 'page-link';
+                pageLink.href = '#';
+                pageLink.textContent = i;
+                pageLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    currentPage = i;
+                    loadRecepciones();
+                });
+                pageLi.appendChild(pageLink);
+                pagination.appendChild(pageLi);
+            }
+            
+            // Botón siguiente
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+            const nextLink = document.createElement('a');
+            nextLink.className = 'page-link';
+            nextLink.href = '#';
+            nextLink.innerHTML = '&raquo;';
+            nextLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    loadRecepciones();
+                }
+            });
+            nextLi.appendChild(nextLink);
+            pagination.appendChild(nextLi);
+        }
+        
+        // Función para formatear fecha YYYY-MM-DD
+        function formatDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+        
+        // Función para mostrar fecha en formato más amigable
+        function formatDateDisplay(dateStr) {
+            // Convertir YYYY-MM-DD a DD/MM/YYYY
+            const parts = dateStr.split('-');
+            if (parts.length === 3) {
+                return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+            return dateStr;
+        }
+    });
+</script>
+{% endblock %} 

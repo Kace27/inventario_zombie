@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, jsonify
 import json
+from utils.auth_middleware import admin_required, cocina_required, any_role_required
 
 # Para depuración
 def get_api_endpoints():
@@ -42,9 +43,17 @@ def lista():
 
 # Kitchen receptions web routes
 @recepciones_web.route('', methods=['GET'])
+@any_role_required
 def formulario():
     """Render the kitchen reception form page"""
     return render_template('recepciones/formulario.html')
+
+# Admin-only route for viewing all reception history
+@recepciones_web.route('/historial', methods=['GET'])
+@admin_required
+def historial():
+    """Render the admin-only reception history page"""
+    return render_template('recepciones/historial.html')
 
 # Inventory web routes
 @inventario_web.route('/dashboard', methods=['GET'])
