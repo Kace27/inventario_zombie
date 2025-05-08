@@ -403,45 +403,85 @@ def importar_recibos():
                         
                         current_app.logger.info(f"  Processing product: {product_name} (variant: {variant}) - quantity: {quantity}")
                         
-                        # Check if the article exists
+                        # Check if the parent article exists
                         cursor.execute(
-                            "SELECT id, precio_venta, categoria FROM ArticulosVendidos WHERE nombre = ?",
+                            "SELECT id, precio_venta, categoria FROM ArticulosVendidos WHERE nombre = ? AND es_variante = 0",
                             (product_name,)
                         )
-                        articulo_result = cursor.fetchone()
+                        parent_result = cursor.fetchone()
                         
-                        # Set default pricing information
-                        precio_unitario = 0
-                        categoria = None
-                        
-                        # If the article doesn't exist, create it
-                        if not articulo_result:
+                        # If the parent article doesn't exist, create it
+                        if not parent_result:
                             try:
                                 cursor.execute(
                                     """
-                                    INSERT INTO ArticulosVendidos (nombre, categoria, precio_venta)
-                                    VALUES (?, ?, ?)
+                                    INSERT INTO ArticulosVendidos (nombre, categoria, precio_venta, es_variante)
+                                    VALUES (?, ?, ?, 0)
                                     """,
                                     (product_name, None, 0)
                                 )
+                                parent_id = cursor.lastrowid
                                 created_articles_count += 1
-                                current_app.logger.info(f"Created new article: {product_name}")
+                                current_app.logger.info(f"Created new parent article: {product_name}")
+                                
+                                parent_result = {
+                                    'id': parent_id,
+                                    'precio_venta': 0,
+                                    'categoria': None
+                                }
                             except sqlite3.Error as e:
-                                current_app.logger.error(f"Error creating article {product_name}: {str(e)}")
+                                current_app.logger.error(f"Error creating parent article {product_name}: {str(e)}")
                                 errors.append({
                                     "product": product_name,
-                                    "error": f"Error creating article: {str(e)}"
+                                    "error": f"Error creating parent article: {str(e)}"
                                 })
+                                continue
+                        
+                        # If we have a variant, check if it exists or create it
+                        if variant != "Sin variante":
+                            variant_name = f"{product_name} - {variant}"
+                            cursor.execute(
+                                "SELECT id, precio_venta FROM ArticulosVendidos WHERE nombre = ? AND es_variante = 1",
+                                (variant_name,)
+                            )
+                            variant_result = cursor.fetchone()
+                            
+                            if not variant_result:
+                                try:
+                                    cursor.execute(
+                                        """
+                                        INSERT INTO ArticulosVendidos 
+                                        (nombre, categoria, precio_venta, articulo_padre_id, es_variante)
+                                        VALUES (?, ?, ?, ?, 1)
+                                        """,
+                                        (variant_name, parent_result['categoria'], parent_result['precio_venta'], parent_result['id'])
+                                    )
+                                    created_articles_count += 1
+                                    current_app.logger.info(f"Created new variant: {variant_name}")
+                                    
+                                    # Use the variant's information for the sale
+                                    precio_unitario = parent_result['precio_venta']
+                                    articulo_nombre = variant_name
+                                except sqlite3.Error as e:
+                                    current_app.logger.error(f"Error creating variant {variant_name}: {str(e)}")
+                                    errors.append({
+                                        "product": variant_name,
+                                        "error": f"Error creating variant: {str(e)}"
+                                    })
+                                    continue
+                            else:
+                                precio_unitario = variant_result['precio_venta']
+                                articulo_nombre = variant_name
                         else:
-                            precio_unitario = articulo_result['precio_venta'] or 0
-                            categoria = articulo_result['categoria']
+                            precio_unitario = parent_result['precio_venta']
+                            articulo_nombre = product_name
                         
                         # Prepare the sales data
                         sale_data = {
                             'fecha': formatted_date,
                             'hora': receipt_time,
-                            'articulo': product_name,
-                            'categoria': categoria,
+                            'articulo': articulo_nombre,
+                            'categoria': parent_result['categoria'],
                             'subcategoria': variant if variant != "Sin variante" else None,
                             'articulos_vendidos': quantity,
                             'precio_unitario': precio_unitario,

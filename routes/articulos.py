@@ -100,8 +100,13 @@ def composicion(id):
     """Render the product composition page"""
     db = get_db()
     
-    # Get the product
-    cursor = db.execute('SELECT * FROM ArticulosVendidos WHERE id = ?', (id,))
+    # Get the product with parent info
+    cursor = db.execute('''
+        SELECT a.*, p.nombre as articulo_padre_nombre 
+        FROM ArticulosVendidos a
+        LEFT JOIN ArticulosVendidos p ON a.articulo_padre_id = p.id
+        WHERE a.id = ?
+    ''', (id,))
     articulo = cursor.fetchone()
     if articulo is None:
         # Handle not found
@@ -123,6 +128,25 @@ def composicion(id):
                        unidad_medida=row['unidad_medida'],
                        precio_compra=row['precio_compra'])
                   for row in cursor.fetchall()]
+    
+    # Si es una variante y no tiene composición propia, heredar del padre
+    if articulo['es_variante'] and not composicion and articulo['articulo_padre_id']:
+        cursor = db.execute('''
+            SELECT c.id, c.articulo_id, c.ingrediente_id, c.cantidad, 
+                   i.nombre as ingrediente_nombre, i.unidad_medida, i.precio_compra
+            FROM ComposicionArticulo c
+            JOIN Ingredientes i ON c.ingrediente_id = i.id
+            WHERE c.articulo_id = ?
+        ''', (articulo['articulo_padre_id'],))
+        composicion = [dict(id=None,  # ID nulo para indicar que es heredado
+                           articulo_id=id,  # Usamos el ID de la variante
+                           ingrediente_id=row['ingrediente_id'],
+                           cantidad=row['cantidad'],
+                           ingrediente_nombre=row['ingrediente_nombre'],
+                           unidad_medida=row['unidad_medida'],
+                           precio_compra=row['precio_compra'],
+                           heredado=True)  # Indicador de que es heredado
+                      for row in cursor.fetchall()]
     
     # Get all ingredients for the dropdown
     cursor = db.execute('SELECT * FROM Ingredientes')
@@ -445,8 +469,11 @@ def agregar_variante(articulo_id):
     if articulo_padre is None:
         return jsonify({'error': 'Parent product not found'}), 404
     
+    # Crear el nombre completo de la variante: "Nombre Padre - Nombre Variante"
+    nombre_completo = f"{articulo_padre['nombre']} - {data['nombre']}"
+    
     # Check if the variant name already exists
-    cursor = db.execute('SELECT id FROM ArticulosVendidos WHERE nombre = ?', (data['nombre'],))
+    cursor = db.execute('SELECT id FROM ArticulosVendidos WHERE nombre = ?', (nombre_completo,))
     if cursor.fetchone() is not None:
         return jsonify({'error': 'Product name already exists'}), 409
     
@@ -461,7 +488,7 @@ def agregar_variante(articulo_id):
             (nombre, categoria, subcategoria, precio_venta, articulo_padre_id, es_variante) 
             VALUES (?, ?, ?, ?, ?, 1)
             ''',
-            (data['nombre'], articulo_padre['categoria'], articulo_padre['subcategoria'], 
+            (nombre_completo, articulo_padre['categoria'], articulo_padre['subcategoria'], 
              precio_venta, articulo_id)
         )
         db.commit()
@@ -639,5 +666,50 @@ def eliminar_regla_variante(regla_id):
         db.execute('DELETE FROM ReglasVariantes WHERE id = ?', (regla_id,))
         db.commit()
         return jsonify({'message': 'Rule deleted successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@articulos_bp.route('/<int:articulo_id>/personalizar-composicion', methods=['POST'])
+def personalizar_composicion(articulo_id):
+    """Personaliza la composición de una variante copiando la del producto padre"""
+    if not validate_id(articulo_id):
+        return jsonify({'error': 'Invalid ID format'}), 400
+    
+    db = get_db()
+    
+    # Verificar que el artículo existe y es una variante
+    cursor = db.execute('''
+        SELECT a.*, p.nombre as articulo_padre_nombre 
+        FROM ArticulosVendidos a
+        LEFT JOIN ArticulosVendidos p ON a.articulo_padre_id = p.id
+        WHERE a.id = ?
+    ''', (articulo_id,))
+    articulo = cursor.fetchone()
+    
+    if articulo is None:
+        return jsonify({'error': 'Article not found'}), 404
+    
+    if not articulo['es_variante'] or not articulo['articulo_padre_id']:
+        return jsonify({'error': 'Article is not a variant'}), 400
+    
+    try:
+        # Obtener la composición del producto padre
+        cursor = db.execute('''
+            SELECT ingrediente_id, cantidad
+            FROM ComposicionArticulo
+            WHERE articulo_id = ?
+        ''', (articulo['articulo_padre_id'],))
+        composicion_padre = cursor.fetchall()
+        
+        # Copiar cada ingrediente a la variante
+        for comp in composicion_padre:
+            db.execute('''
+                INSERT INTO ComposicionArticulo (articulo_id, ingrediente_id, cantidad)
+                VALUES (?, ?, ?)
+            ''', (articulo_id, comp['ingrediente_id'], comp['cantidad']))
+        
+        db.commit()
+        return jsonify({'message': 'Composition personalized successfully'})
+    
     except Exception as e:
         return jsonify({'error': str(e)}), 500 

@@ -64,10 +64,13 @@
             {% if variante.articulo_padre_id == articulo.id %}
             <div class="variant-card">
                 <div class="variant-header">
-                    <span class="variant-name">{{ variante.nombre }}</span>
+                    <span class="variant-name">{{ variante.nombre.split(' - ')[1] }}</span>
                     <span class="variant-price">${{ "%.2f"|format(variante.precio_venta) }}</span>
                 </div>
                 <div class="variant-actions">
+                    <a href="{{ url_for('articulos_web.composicion', id=variante.id) }}" class="btn btn-info btn-sm" title="Ver composición">
+                        <i class="fas fa-list"></i>
+                    </a>
                     <a href="{{ url_for('articulos_web.editar', id=variante.id) }}" class="btn btn-secondary btn-sm" title="Editar">
                         <i class="fas fa-edit"></i>
                     </a>
@@ -141,11 +144,14 @@
             {% if variante.articulo_padre_id == articulo.id %}
             <tr class="variant-row" data-parent-id="{{ articulo.id }}" style="display: none;">
                 <td></td>
-                <td><i class="fas fa-level-up-alt fa-rotate-90 mr-2"></i> {{ variante.nombre }}</td>
+                <td><i class="fas fa-level-up-alt fa-rotate-90 mr-2"></i> {{ variante.nombre.split(' - ')[1] }}</td>
                 <td>{{ variante.categoria }}</td>
                 <td>{{ variante.subcategoria or '-' }}</td>
                 <td>${{ "%.2f"|format(variante.precio_venta) }}</td>
                 <td>
+                    <a href="{{ url_for('articulos_web.composicion', id=variante.id) }}" class="btn btn-info btn-sm" title="Ver composición">
+                        <i class="fas fa-list"></i>
+                    </a>
                     <a href="{{ url_for('articulos_web.editar', id=variante.id) }}" class="btn btn-secondary btn-sm" title="Editar">
                         <i class="fas fa-edit"></i>
                     </a>
@@ -208,6 +214,7 @@
     display: flex;
     gap: 10px;
     align-items: center;
+    flex: 1;
 }
 
 .variant-name {
@@ -221,6 +228,7 @@
 .variant-actions {
     display: flex;
     gap: 5px;
+    align-items: center;
 }
 
 .variant-row td {

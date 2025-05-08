@@ -22,6 +22,17 @@
     <div class="detail-item">
         <strong>Precio de Venta:</strong> ${{ "%.2f"|format(articulo.precio_venta) }}
     </div>
+    {% if articulo.es_variante %}
+    <div class="detail-item variant-info">
+        <strong>Variante de:</strong> {{ articulo.articulo_padre_nombre }}
+        {% if composicion and composicion[0].heredado %}
+        <span class="badge badge-info">Composición heredada</span>
+        <button id="customize-composition" class="btn btn-sm btn-primary">
+            <i class="fas fa-edit"></i> Personalizar Composición
+        </button>
+        {% endif %}
+    </div>
+    {% endif %}
 </div>
 
 <div class="composition-section">
@@ -39,15 +50,22 @@
             </thead>
             <tbody id="composition-list">
                 {% for comp in composicion %}
-                <tr>
-                    <td>{{ comp.ingrediente_nombre }}</td>
+                <tr {% if comp.heredado %}class="inherited-row"{% endif %}>
+                    <td>
+                        {{ comp.ingrediente_nombre }}
+                        {% if comp.heredado %}
+                        <span class="badge badge-light">Heredado</span>
+                        {% endif %}
+                    </td>
                     <td>{{ comp.cantidad }} {{ comp.unidad_medida }}</td>
                     <td>
+                        {% if not comp.heredado %}
                         <button class="btn btn-danger btn-sm delete-composition" 
                                 data-id="{{ comp.id }}" 
                                 data-ingrediente="{{ comp.ingrediente_nombre }}">
                             <i class="fas fa-trash"></i>
                         </button>
+                        {% endif %}
                     </td>
                 </tr>
                 {% else %}
@@ -109,6 +127,42 @@
         </span>
     </div>
 </div>
+
+<style>
+.variant-info {
+    background-color: #f8f9fa;
+    padding: 10px;
+    border-radius: 4px;
+    margin-top: 10px;
+}
+
+.badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    margin-left: 8px;
+}
+
+.badge-info {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.badge-light {
+    background-color: #f8f9fa;
+    color: #666;
+    border: 1px solid #ddd;
+}
+
+.inherited-row {
+    background-color: #f8f9fa;
+}
+
+#customize-composition {
+    margin-left: 10px;
+}
+</style>
+
 {% endblock %}
 
 {% block scripts %}
@@ -118,13 +172,41 @@
     // Set variables from Jinja2 templates in a safer way
     const articuloData = {
         id: "{{ articulo.id }}",
-        precioVenta: "{{ articulo.precio_venta }}"
+        precioVenta: "{{ articulo.precio_venta }}",
+        esVariante: {{ articulo.es_variante|tojson }},
+        articuloPadreId: {{ articulo.articulo_padre_id|tojson }}
     };
     
-    // When page loads, initialize delete buttons
+    // When page loads, initialize delete buttons and customize button
     document.addEventListener('DOMContentLoaded', function() {
         initDeleteCompositionButtons();
+        initCustomizeButton();
     });
+    
+    // Initialize customize composition button
+    function initCustomizeButton() {
+        const customizeBtn = document.getElementById('customize-composition');
+        if (customizeBtn) {
+            customizeBtn.addEventListener('click', async function() {
+                if (confirm('¿Deseas crear una composición personalizada para esta variante? Esto copiará la composición del producto padre.')) {
+                    try {
+                        const response = await fetch(`/api/articulos/${articuloData.id}/personalizar-composicion`, {
+                            method: 'POST'
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error('Error al personalizar la composición');
+                        }
+                        
+                        // Recargar la página para mostrar la nueva composición personalizada
+                        window.location.reload();
+                    } catch (error) {
+                        Toast.show(`Error: ${error.message}`, 'error');
+                    }
+                }
+            });
+        }
+    }
     
     // Load the composition data
     function loadComposition(articleId) {
@@ -160,17 +242,21 @@
         }
         
         composicion.forEach(item => {
+            const deleteButton = !item.heredado ? `
+                <button class="btn btn-danger btn-sm delete-composition" 
+                        data-id="${item.id}" 
+                        data-ingrediente="${item.ingrediente_nombre}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            ` : '';
+            
+            const heredadoBadge = item.heredado ? '<span class="badge badge-light">Heredado</span>' : '';
+            
             compositionList.innerHTML += `
-                <tr>
-                    <td>${item.ingrediente_nombre}</td>
+                <tr ${item.heredado ? 'class="inherited-row"' : ''}>
+                    <td>${item.ingrediente_nombre} ${heredadoBadge}</td>
                     <td>${item.cantidad} ${item.unidad_medida}</td>
-                    <td>
-                        <button class="btn btn-danger btn-sm delete-composition" 
-                                data-id="${item.id}" 
-                                data-ingrediente="${item.ingrediente_nombre}">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
+                    <td>${deleteButton}</td>
                 </tr>
             `;
         });
@@ -202,26 +288,12 @@
                         });
                         
                         if (!response.ok) {
-                            throw new Error(`Error: ${response.statusText}`);
+                            throw new Error('Error al eliminar el ingrediente');
                         }
                         
-                        // Get the response data
-                        const data = await response.json();
-                        
-                        // Show success message
-                        Toast.show('Ingrediente eliminado correctamente', 'success');
-                        
-                        // Remove the row from the table
-                        newButton.closest('tr').remove();
-                        
-                        // If no more rows, show the empty message
-                        const compositionList = document.getElementById('composition-list');
-                        if (compositionList.children.length === 0) {
-                            compositionList.innerHTML = '<tr><td colspan="3" class="text-center">No hay ingredientes en este artículo</td></tr>';
-                        }
-                        
-                        // Update cost summary by reloading composition
+                        // Reload composition data
                         loadComposition(articuloData.id);
+                        Toast.show('Ingrediente eliminado correctamente');
                     } catch (error) {
                         Toast.show(`Error: ${error.message}`, 'error');
                     }
