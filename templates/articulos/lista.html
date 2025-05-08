@@ -20,8 +20,16 @@
 <!-- Mobile Card View (default for small screens) -->
 <div class="item-list" id="article-cards">
     {% for articulo in articulos %}
+    {% if not articulo.es_variante %}
     <div class="item-card">
-        <h3>{{ articulo.nombre }}</h3>
+        <div class="item-header">
+            <h3>{{ articulo.nombre }}</h3>
+            {% if articulos|selectattr('articulo_padre_id', 'equalto', articulo.id)|list|length > 0 %}
+            <button class="btn btn-link toggle-variants" data-parent-id="{{ articulo.id }}">
+                <i class="fas fa-chevron-down"></i>
+            </button>
+            {% endif %}
+        </div>
         <div class="item-detail">
             <span>Categoría:</span>
             <span>{{ articulo.categoria }}</span>
@@ -49,7 +57,32 @@
                 <i class="fas fa-trash"></i>
             </button>
         </div>
+        
+        <!-- Variantes (inicialmente ocultas) -->
+        <div class="variants-container" id="variants-{{ articulo.id }}" style="display: none;">
+            {% for variante in articulos %}
+            {% if variante.articulo_padre_id == articulo.id %}
+            <div class="variant-card">
+                <div class="variant-header">
+                    <span class="variant-name">{{ variante.nombre }}</span>
+                    <span class="variant-price">${{ "%.2f"|format(variante.precio_venta) }}</span>
+                </div>
+                <div class="variant-actions">
+                    <a href="{{ url_for('articulos_web.editar', id=variante.id) }}" class="btn btn-secondary btn-sm" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    <button class="btn btn-danger btn-sm delete-product" 
+                           data-id="{{ variante.id }}" 
+                           data-name="{{ variante.nombre }}" title="Eliminar">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
     </div>
+    {% endif %}
     {% else %}
     <div class="empty-state">
         <i class="fas fa-hamburger fa-3x"></i>
@@ -66,6 +99,7 @@
     <table>
         <thead>
             <tr>
+                <th></th>
                 <th>Nombre</th>
                 <th>Categoría</th>
                 <th>Subcategoría</th>
@@ -75,7 +109,15 @@
         </thead>
         <tbody>
             {% for articulo in articulos %}
-            <tr>
+            {% if not articulo.es_variante %}
+            <tr class="parent-row">
+                <td>
+                    {% if articulos|selectattr('articulo_padre_id', 'equalto', articulo.id)|list|length > 0 %}
+                    <button class="btn btn-link toggle-variants" data-parent-id="{{ articulo.id }}">
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    {% endif %}
+                </td>
                 <td>{{ articulo.nombre }}</td>
                 <td>{{ articulo.categoria }}</td>
                 <td>{{ articulo.subcategoria or '-' }}</td>
@@ -94,14 +136,105 @@
                     </button>
                 </td>
             </tr>
+            <!-- Variantes (inicialmente ocultas) -->
+            {% for variante in articulos %}
+            {% if variante.articulo_padre_id == articulo.id %}
+            <tr class="variant-row" data-parent-id="{{ articulo.id }}" style="display: none;">
+                <td></td>
+                <td><i class="fas fa-level-up-alt fa-rotate-90 mr-2"></i> {{ variante.nombre }}</td>
+                <td>{{ variante.categoria }}</td>
+                <td>{{ variante.subcategoria or '-' }}</td>
+                <td>${{ "%.2f"|format(variante.precio_venta) }}</td>
+                <td>
+                    <a href="{{ url_for('articulos_web.editar', id=variante.id) }}" class="btn btn-secondary btn-sm" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    <button class="btn btn-danger btn-sm delete-product" 
+                           data-id="{{ variante.id }}" 
+                           data-name="{{ variante.nombre }}" title="Eliminar">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+            {% endif %}
             {% else %}
             <tr>
-                <td colspan="5" class="text-center">No hay artículos registrados</td>
+                <td colspan="6" class="text-center">No hay artículos registrados</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+
+<style>
+.item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.toggle-variants {
+    padding: 0;
+    color: #666;
+}
+
+.toggle-variants i {
+    transition: transform 0.3s ease;
+}
+
+.toggle-variants.active i {
+    transform: rotate(180deg);
+}
+
+.variants-container {
+    margin-top: 10px;
+    padding-left: 20px;
+    border-left: 2px solid #eee;
+}
+
+.variant-card {
+    background: #f8f9fa;
+    padding: 10px;
+    margin: 5px 0;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.variant-header {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.variant-name {
+    font-weight: 500;
+}
+
+.variant-price {
+    color: #666;
+}
+
+.variant-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.variant-row td {
+    background-color: #f8f9fa;
+}
+
+.fa-rotate-90 {
+    transform: rotate(90deg);
+    color: #666;
+    font-size: 0.8em;
+    margin-right: 8px;
+}
+</style>
+
 {% endblock %}
 
 {% block scripts %}
@@ -111,7 +244,7 @@
     // Search functionality
     document.getElementById('search-input').addEventListener('keyup', function() {
         const searchTerm = this.value.toLowerCase();
-        const items = document.querySelectorAll('.item-card, table tbody tr:not(.empty-row)');
+        const items = document.querySelectorAll('.item-card:not(.variant-card), table tbody tr.parent-row');
         
         items.forEach(item => {
             if (item.classList.contains('item-card')) {
@@ -126,8 +259,8 @@
                 }
             } else {
                 // For table view
-                const name = item.querySelector('td:nth-child(1)').textContent.toLowerCase();
-                const category = item.querySelector('td:nth-child(2)').textContent.toLowerCase();
+                const name = item.querySelector('td:nth-child(2)').textContent.toLowerCase();
+                const category = item.querySelector('td:nth-child(3)').textContent.toLowerCase();
                 
                 if (name.includes(searchTerm) || category.includes(searchTerm)) {
                     item.style.display = '';
@@ -135,6 +268,29 @@
                     item.style.display = 'none';
                 }
             }
+        });
+    });
+
+    // Toggle variants functionality
+    document.querySelectorAll('.toggle-variants').forEach(button => {
+        button.addEventListener('click', function() {
+            const parentId = this.dataset.parentId;
+            const variantsContainer = document.getElementById(`variants-${parentId}`);
+            const variantRows = document.querySelectorAll(`tr.variant-row[data-parent-id="${parentId}"]`);
+            const icon = this.querySelector('i');
+            
+            // Toggle variants in card view
+            if (variantsContainer) {
+                variantsContainer.style.display = variantsContainer.style.display === 'none' ? 'block' : 'none';
+            }
+            
+            // Toggle variants in table view
+            variantRows.forEach(row => {
+                row.style.display = row.style.display === 'none' ? '' : 'none';
+            });
+            
+            // Toggle icon rotation
+            this.classList.toggle('active');
         });
     });
 </script>

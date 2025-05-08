@@ -49,6 +49,92 @@
                    value="{{ articulo.precio_venta if articulo else '' }}">
         </div>
     </div>
+
+    {% if articulo %}
+    <!-- Sección de Variantes -->
+    <div class="variants-section">
+        <h3>Gestión de Variantes</h3>
+        
+        {% if not articulo.es_variante %}
+        <!-- Si es un producto padre, mostrar sus variantes -->
+        <div class="variants-list">
+            <h4>Variantes existentes</h4>
+            {% if variantes %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Precio</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for variante in variantes %}
+                    <tr>
+                        <td>{{ variante.nombre }}</td>
+                        <td>${{ "%.2f"|format(variante.precio_venta) }}</td>
+                        <td>
+                            <a href="{{ url_for('articulos_web.editar', id=variante.id) }}" class="btn btn-sm btn-secondary">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>No hay variantes registradas</p>
+            {% endif %}
+            
+            <!-- Formulario para agregar nueva variante -->
+            <div class="add-variant-form">
+                <h4>Agregar nueva variante</h4>
+                <div class="form-group">
+                    <label for="variante_nombre">Nombre de la variante</label>
+                    <input type="text" id="variante_nombre" name="variante_nombre" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="variante_precio">Precio de la variante</label>
+                    <div class="input-addon">
+                        <span class="addon-prefix">$</span>
+                        <input type="number" id="variante_precio" name="variante_precio" step="0.01" min="0" 
+                               value="{{ articulo.precio_venta }}">
+                    </div>
+                </div>
+                <button type="button" id="add-variant-btn" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Agregar Variante
+                </button>
+            </div>
+        </div>
+        {% else %}
+        <!-- Si es una variante, mostrar información del producto padre -->
+        <div class="parent-product-info">
+            <h4>Información del producto padre</h4>
+            {% if articulo.articulo_padre_nombre %}
+            <p>Este artículo es una variante de: <strong>{{ articulo.articulo_padre_nombre }}</strong></p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if not articulo.es_variante %}
+        <!-- Opción para convertir en variante -->
+        <div class="convert-to-variant">
+            <h4>Convertir en variante</h4>
+            <div class="form-group">
+                <label for="articulo_padre_id">Seleccionar producto padre</label>
+                <select id="articulo_padre_id" name="articulo_padre_id">
+                    <option value="">No es una variante</option>
+                    {% for producto in productos_padre %}
+                    <option value="{{ producto.id }}" {% if articulo.articulo_padre_id == producto.id %}selected{% endif %}>
+                        {{ producto.nombre }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
     
     <div class="form-actions">
         <button type="submit" class="btn btn-primary btn-block">
@@ -66,4 +152,63 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/api.js') }}"></script>
 <script src="{{ url_for('static', filename='js/forms.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('product-form');
+    const addVariantBtn = document.getElementById('add-variant-btn');
+
+    if (addVariantBtn) {
+        addVariantBtn.addEventListener('click', async function() {
+            const varianteName = document.getElementById('variante_nombre').value;
+            const variantePrecio = document.getElementById('variante_precio').value;
+            const articuloId = document.querySelector('input[name="id"]').value;
+
+            if (!varianteName) {
+                alert('Por favor ingrese un nombre para la variante');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/articulos/${articuloId}/agregar-variante`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        nombre: varianteName,
+                        precio_venta: variantePrecio || null
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Error al crear la variante');
+                }
+
+                // Recargar la página para mostrar la nueva variante
+                window.location.reload();
+            } catch (error) {
+                alert(error.message);
+            }
+        });
+    }
+
+    // Manejar el cambio de producto padre
+    const articuloPadreSelect = document.getElementById('articulo_padre_id');
+    if (articuloPadreSelect) {
+        articuloPadreSelect.addEventListener('change', function() {
+            const esVariante = this.value !== '';
+            // Actualizar el campo es_variante en el formulario
+            let esVarianteInput = document.querySelector('input[name="es_variante"]');
+            if (!esVarianteInput) {
+                esVarianteInput = document.createElement('input');
+                esVarianteInput.type = 'hidden';
+                esVarianteInput.name = 'es_variante';
+                form.appendChild(esVarianteInput);
+            }
+            esVarianteInput.value = esVariante ? '1' : '0';
+        });
+    }
+});
+</script>
 {% endblock %} 

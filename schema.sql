@@ -7,6 +7,7 @@ DROP TABLE IF EXISTS AjustesInventario;
 DROP TABLE IF EXISTS Usuarios;
 DROP TABLE IF EXISTS LoginAttempts;
 DROP TABLE IF EXISTS RecibosImportados;
+DROP TABLE IF EXISTS ReglasVariantes;
 
 CREATE TABLE Ingredientes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -23,7 +24,18 @@ CREATE TABLE ArticulosVendidos (
     nombre TEXT NOT NULL UNIQUE,
     categoria TEXT,
     subcategoria TEXT,
-    precio_venta REAL
+    precio_venta REAL,
+    articulo_padre_id INTEGER,
+    es_variante BOOLEAN DEFAULT 0,
+    FOREIGN KEY (articulo_padre_id) REFERENCES ArticulosVendidos (id)
+);
+
+CREATE TABLE ReglasVariantes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    patron_principal TEXT NOT NULL,
+    patron_variante TEXT NOT NULL,
+    descripcion TEXT,
+    activo BOOLEAN DEFAULT 1
 );
 
 CREATE TABLE ComposicionArticulo (

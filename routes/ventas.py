@@ -5,6 +5,7 @@ from utils.csv_parser import parse_csv, validate_sales_data, parse_receipts_data
 from utils.error_handler import handle_error
 import json
 import datetime
+import re
 
 bp = Blueprint('ventas', __name__, url_prefix='/api/ventas')
 
@@ -106,12 +107,18 @@ def importar_ventas():
         # Initialize counters
         inserted_count = 0
         created_articles_count = 0
+        created_variants_count = 0
         errors = []
         
         # Begin transaction
         cursor.execute("BEGIN TRANSACTION")
         
         try:
+            # Get all active variant rules
+            cursor.execute("SELECT * FROM ReglasVariantes WHERE activo = 1")
+            reglas_variantes = cursor.fetchall()
+            
+            # Process each sales record
             for row in sales_data:
                 try:
                     # Check if the article exists
@@ -120,27 +127,72 @@ def importar_ventas():
                     precio_unitario = row.get('precio_unitario', 0)
                     
                     cursor.execute(
-                        "SELECT id FROM ArticulosVendidos WHERE nombre = ?",
+                        "SELECT id, es_variante, articulo_padre_id FROM ArticulosVendidos WHERE nombre = ?",
                         (articulo_nombre,)
                     )
                     articulo_result = cursor.fetchone()
                     
-                    # If the article doesn't exist, create it
+                    # If the article doesn't exist, create it and check for potential variants
                     if not articulo_result:
                         try:
+                            # Check if this article might be a variant of an existing product
+                            articulo_padre_id = None
+                            es_variante = 0
+                            
+                            # Check against variant rules
+                            for regla in reglas_variantes:
+                                patron_principal = regla['patron_principal']
+                                patron_variante = regla['patron_variante']
+                                
+                                # Try to match the current article name against the variant pattern
+                                if re.search(patron_variante, articulo_nombre, re.IGNORECASE):
+                                    # Extract the base name using the patterns
+                                    base_name = re.sub(patron_variante, patron_principal, articulo_nombre, flags=re.IGNORECASE)
+                                    
+                                    # Check if the base article exists
+                                    cursor.execute(
+                                        "SELECT id FROM ArticulosVendidos WHERE nombre = ? AND es_variante = 0",
+                                        (base_name,)
+                                    )
+                                    base_article = cursor.fetchone()
+                                    
+                                    if base_article:
+                                        articulo_padre_id = base_article['id']
+                                        es_variante = 1
+                                        current_app.logger.info(f"Detected variant: {articulo_nombre} of parent: {base_name}")
+                                        break
+                            
                             # Insert new article into ArticulosVendidos
                             cursor.execute(
                                 """
-                                INSERT INTO ArticulosVendidos (nombre, categoria, precio_venta)
-                                VALUES (?, ?, ?)
+                                INSERT INTO ArticulosVendidos (nombre, categoria, precio_venta, articulo_padre_id, es_variante)
+                                VALUES (?, ?, ?, ?, ?)
                                 """,
-                                (articulo_nombre, articulo_categoria, precio_unitario)
+                                (articulo_nombre, articulo_categoria, precio_unitario, articulo_padre_id, es_variante)
                             )
                             articulo_id = cursor.lastrowid
-                            created_articles_count += 1
                             
-                            # Log article creation
-                            current_app.logger.info(f"Created new article: {articulo_nombre} (ID: {articulo_id})")
+                            if es_variante:
+                                created_variants_count += 1
+                                
+                                # Copy composition from parent product
+                                cursor.execute(
+                                    'SELECT ingrediente_id, cantidad FROM ComposicionArticulo WHERE articulo_id = ?',
+                                    (articulo_padre_id,)
+                                )
+                                composicion_padre = cursor.fetchall()
+                                
+                                # Insert composition for the variant
+                                for comp in composicion_padre:
+                                    cursor.execute(
+                                        'INSERT INTO ComposicionArticulo (articulo_id, ingrediente_id, cantidad) VALUES (?, ?, ?)',
+                                        (articulo_id, comp['ingrediente_id'], comp['cantidad'])
+                                    )
+                                
+                                current_app.logger.info(f"Created variant: {articulo_nombre} (ID: {articulo_id}) of parent ID: {articulo_padre_id}")
+                            else:
+                                created_articles_count += 1
+                                current_app.logger.info(f"Created new article: {articulo_nombre} (ID: {articulo_id})")
                             
                         except sqlite3.Error as e:
                             current_app.logger.error(f"Error creating article {articulo_nombre}: {str(e)}")
@@ -211,12 +263,16 @@ def importar_ventas():
             # Return the results
             success_message = f"Successfully imported {inserted_count} sales records"
             if created_articles_count > 0:
-                success_message += f" and created {created_articles_count} new articles"
+                success_message += f", created {created_articles_count} new articles"
+            if created_variants_count > 0:
+                success_message += f" and {created_variants_count} article variants"
             
             # Spanish messages for the user interface
             spanish_message = f"Se importaron {inserted_count} registros de ventas"
             if created_articles_count > 0:
-                spanish_message += f" y se crearon {created_articles_count} nuevos artículos"
+                spanish_message += f", se crearon {created_articles_count} nuevos artículos"
+            if created_variants_count > 0:
+                spanish_message += f" y {created_variants_count} variantes de artículos"
                 
             return jsonify({
                 "success": True,
