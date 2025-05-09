@@ -128,6 +128,57 @@
             grid-template-columns: 1fr;
         }
     }
+    .pagination-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 20px 0;
+        gap: 10px;
+    }
+    
+    .pagination-info {
+        color: #666;
+        font-size: 0.9em;
+    }
+    
+    .pagination-controls {
+        display: flex;
+        gap: 5px;
+    }
+    
+    .pagination-button {
+        padding: 5px 10px;
+        border: 1px solid #ddd;
+        background: white;
+        cursor: pointer;
+        border-radius: 4px;
+        color: #333;
+        transition: all 0.2s;
+    }
+    
+    .pagination-button:hover:not(:disabled) {
+        background: #f0f0f0;
+        border-color: #aaa;
+    }
+    
+    .pagination-button:disabled {
+        background: #f5f5f5;
+        color: #999;
+        cursor: not-allowed;
+    }
+    
+    .pagination-button.active {
+        background: #007bff;
+        color: white;
+        border-color: #0056b3;
+    }
+    
+    .page-size-selector {
+        padding: 5px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        margin-left: 10px;
+    }
 </style>
 {% endblock %}
 
@@ -152,6 +203,33 @@
             <h4>No se encontraron ventas</h4>
             <p>No hay registros de ventas en la base de datos. Puedes importar ventas usando la opción "Importar Recibos".</p>
         </div>
+        
+        <div class="pagination-container">
+            <div class="pagination-info">
+                Mostrando <span id="currentRange">0-0</span> de <span id="totalRecords">0</span> registros
+            </div>
+            <div class="pagination-controls">
+                <button id="firstPage" class="pagination-button" disabled>
+                    <i class="fas fa-angle-double-left"></i>
+                </button>
+                <button id="prevPage" class="pagination-button" disabled>
+                    <i class="fas fa-angle-left"></i>
+                </button>
+                <span id="currentPage" class="pagination-button active">1</span>
+                <button id="nextPage" class="pagination-button">
+                    <i class="fas fa-angle-right"></i>
+                </button>
+                <button id="lastPage" class="pagination-button">
+                    <i class="fas fa-angle-double-right"></i>
+                </button>
+            </div>
+            <select id="pageSize" class="page-size-selector">
+                <option value="10">10 por página</option>
+                <option value="25">25 por página</option>
+                <option value="50">50 por página</option>
+                <option value="100">100 por página</option>
+            </select>
+        </div>
     </div>
     
     <div id="detailModal" class="detail-modal">
@@ -175,6 +253,16 @@
         const loadingIndicator = document.getElementById('loadingIndicator');
         const noResultsMessage = document.getElementById('noResultsMessage');
         
+        // Pagination elements
+        const firstPageBtn = document.getElementById('firstPage');
+        const prevPageBtn = document.getElementById('prevPage');
+        const currentPageSpan = document.getElementById('currentPage');
+        const nextPageBtn = document.getElementById('nextPage');
+        const lastPageBtn = document.getElementById('lastPage');
+        const pageSizeSelect = document.getElementById('pageSize');
+        const currentRangeSpan = document.getElementById('currentRange');
+        const totalRecordsSpan = document.getElementById('totalRecords');
+        
         // Modal elements
         const detailModal = document.getElementById('detailModal');
         const detailModalClose = document.querySelector('.detail-modal-close');
@@ -183,9 +271,48 @@
         // State variables
         let salesData = [];
         let salesGrouped = {};
+        let currentPage = 1;
+        let pageSize = parseInt(pageSizeSelect.value);
+        let totalRecords = 0;
+        let totalPages = 0;
         
         // Initialize page
         loadSalesData();
+        
+        // Event listeners for pagination
+        firstPageBtn.addEventListener('click', () => {
+            if (currentPage !== 1) {
+                currentPage = 1;
+                loadSalesData();
+            }
+        });
+        
+        prevPageBtn.addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                loadSalesData();
+            }
+        });
+        
+        nextPageBtn.addEventListener('click', () => {
+            if (currentPage < totalPages) {
+                currentPage++;
+                loadSalesData();
+            }
+        });
+        
+        lastPageBtn.addEventListener('click', () => {
+            if (currentPage !== totalPages) {
+                currentPage = totalPages;
+                loadSalesData();
+            }
+        });
+        
+        pageSizeSelect.addEventListener('change', () => {
+            pageSize = parseInt(pageSizeSelect.value);
+            currentPage = 1;
+            loadSalesData();
+        });
         
         // Modal close button
         detailModalClose.addEventListener('click', function() {
@@ -203,8 +330,27 @@
         function loadSalesData() {
             showLoading(true);
             
-            // Fetch data from API without any filters
-            fetch('/api/ventas')
+            const offset = (currentPage - 1) * pageSize;
+            
+            // First, get all unique tickets for the current page
+            fetch(`/api/ventas/tickets?limit=${pageSize}&offset=${offset}`)
+                .then(response => response.json())
+                .then(ticketData => {
+                    if (ticketData.success) {
+                        totalRecords = ticketData.total_tickets;
+                        totalPages = Math.ceil(totalRecords / pageSize);
+                        
+                        if (ticketData.tickets && ticketData.tickets.length > 0) {
+                            // Get all sales for these tickets
+                            const ticketNumbers = ticketData.tickets.join(',');
+                            return fetch(`/api/ventas?tickets=${ticketNumbers}`);
+                        } else {
+                            return Promise.reject('No tickets found');
+                        }
+                    } else {
+                        throw new Error('Error al obtener los tickets');
+                    }
+                })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -213,6 +359,7 @@
                         // Group by receipt number
                         salesGrouped = groupSalesByReceipt(salesData);
                         
+                        updatePaginationControls();
                         renderSales();
                     } else {
                         showError('Error al cargar los datos de ventas.');
@@ -220,10 +367,35 @@
                     showLoading(false);
                 })
                 .catch(error => {
-                    showError('Error en la comunicación con el servidor.');
-                    console.error('Error:', error);
+                    if (error === 'No tickets found') {
+                        salesData = [];
+                        salesGrouped = {};
+                        updatePaginationControls();
+                        renderSales();
+                    } else {
+                        showError('Error en la comunicación con el servidor.');
+                        console.error('Error:', error);
+                    }
                     showLoading(false);
                 });
+        }
+        
+        // Update pagination controls
+        function updatePaginationControls() {
+            // Update current page display
+            currentPageSpan.textContent = currentPage;
+            
+            // Update range and total display
+            const start = (currentPage - 1) * pageSize + 1;
+            const end = Math.min(currentPage * pageSize, totalRecords);
+            currentRangeSpan.textContent = `${start}-${end}`;
+            totalRecordsSpan.textContent = totalRecords;
+            
+            // Update button states
+            firstPageBtn.disabled = currentPage === 1;
+            prevPageBtn.disabled = currentPage === 1;
+            nextPageBtn.disabled = currentPage === totalPages;
+            lastPageBtn.disabled = currentPage === totalPages;
         }
         
         // Group sales by receipt number (ticket)

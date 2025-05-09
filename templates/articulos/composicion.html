@@ -2,6 +2,119 @@
 
 {% block title %}Composición de {{ articulo.nombre }} - Inventario Zombie{% endblock %}
 
+{% block head %}
+<style>
+    .variant-info {
+        background-color: #f8f9fa;
+        padding: 10px;
+        border-radius: 4px;
+        margin-top: 10px;
+    }
+
+    .badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8em;
+        margin-left: 8px;
+    }
+
+    .badge-info {
+        background-color: #17a2b8;
+        color: white;
+    }
+
+    .badge-light {
+        background-color: #f8f9fa;
+        color: #666;
+        border: 1px solid #ddd;
+    }
+
+    .inherited-row {
+        background-color: #f8f9fa;
+    }
+
+    #customize-composition {
+        margin-left: 10px;
+    }
+    
+    .ingredient-search-container {
+        position: relative;
+        margin-bottom: 15px;
+    }
+    
+    .ingredient-search-input {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 16px;
+    }
+    
+    .ingredient-search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        max-height: 200px;
+        overflow-y: auto;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 0 0 4px 4px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        z-index: 1000;
+        display: none;
+    }
+    
+    .ingredient-search-results.active {
+        display: block;
+    }
+    
+    .ingredient-result-item {
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .ingredient-result-item:last-child {
+        border-bottom: none;
+    }
+    
+    .ingredient-result-item:hover {
+        background-color: #f5f5f5;
+    }
+    
+    .ingredient-result-item .unit {
+        color: #666;
+        font-size: 0.9em;
+    }
+    
+    .selected-ingredient {
+        background-color: #e3f2fd;
+        padding: 10px;
+        border-radius: 4px;
+        margin-bottom: 15px;
+        display: none;
+    }
+    
+    .selected-ingredient.active {
+        display: block;
+    }
+    
+    .selected-ingredient-name {
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    
+    .selected-ingredient-unit {
+        color: #666;
+        font-size: 0.9em;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="page-header">
     <h1>Composición: {{ articulo.nombre }}</h1>
@@ -82,15 +195,21 @@
         <h3>Agregar Ingrediente</h3>
         <form id="composition-form" class="mobile-form">
             <input type="hidden" name="articulo_id" value="{{ articulo.id }}">
+            <input type="hidden" id="ingrediente_id" name="ingrediente_id" required>
             
-            <div class="form-group">
-                <label for="ingrediente_id">Ingrediente <span class="required">*</span></label>
-                <select id="ingrediente_id" name="ingrediente_id" required>
-                    <option value="" disabled selected>Seleccione un ingrediente</option>
-                    {% for ingrediente in ingredientes %}
-                    <option value="{{ ingrediente.id }}">{{ ingrediente.nombre }} ({{ ingrediente.unidad_medida }})</option>
-                    {% endfor %}
-                </select>
+            <div class="ingredient-search-container">
+                <label for="ingredient-search">Buscar Ingrediente <span class="required">*</span></label>
+                <input type="text" 
+                       id="ingredient-search" 
+                       class="ingredient-search-input" 
+                       placeholder="Escribe para buscar ingredientes..."
+                       autocomplete="off">
+                <div class="ingredient-search-results"></div>
+            </div>
+            
+            <div class="selected-ingredient">
+                <div class="selected-ingredient-name"></div>
+                <div class="selected-ingredient-unit"></div>
             </div>
             
             <div class="form-group">
@@ -128,41 +247,6 @@
     </div>
 </div>
 
-<style>
-.variant-info {
-    background-color: #f8f9fa;
-    padding: 10px;
-    border-radius: 4px;
-    margin-top: 10px;
-}
-
-.badge {
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.8em;
-    margin-left: 8px;
-}
-
-.badge-info {
-    background-color: #17a2b8;
-    color: white;
-}
-
-.badge-light {
-    background-color: #f8f9fa;
-    color: #666;
-    border: 1px solid #ddd;
-}
-
-.inherited-row {
-    background-color: #f8f9fa;
-}
-
-#customize-composition {
-    margin-left: 10px;
-}
-</style>
-
 {% endblock %}
 
 {% block scripts %}
@@ -170,17 +254,141 @@
 <script src="{{ url_for('static', filename='js/forms.js') }}"></script>
 <script>
     // Set variables from Jinja2 templates in a safer way
-    const articuloData = {
-        id: "{{ articulo.id }}",
-        precioVenta: "{{ articulo.precio_venta }}",
-        esVariante: {{ articulo.es_variante|tojson }},
-        articuloPadreId: {{ articulo.articulo_padre_id|tojson }}
-    };
+    const articuloData = {{ {
+        'id': articulo.id,
+        'precioVenta': articulo.precio_venta,
+        'esVariante': articulo.es_variante,
+        'articuloPadreId': articulo.articulo_padre_id
+    }|tojson|safe }};
     
     // When page loads, initialize delete buttons and customize button
     document.addEventListener('DOMContentLoaded', function() {
+        const ingredientSearch = document.getElementById('ingredient-search');
+        const searchResults = document.querySelector('.ingredient-search-results');
+        const selectedIngredient = document.querySelector('.selected-ingredient');
+        const selectedIngredientName = document.querySelector('.selected-ingredient-name');
+        const selectedIngredientUnit = document.querySelector('.selected-ingredient-unit');
+        const ingredienteIdInput = document.getElementById('ingrediente_id');
+        const ingredientsList = {{ ingredientes|tojson|safe }};
+        let searchTimeout;
+        
         initDeleteCompositionButtons();
         initCustomizeButton();
+        
+        // Search functionality
+        ingredientSearch.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            const searchTerm = this.value.toLowerCase().trim();
+            
+            // Clear selection when search input changes
+            ingredienteIdInput.value = '';
+            selectedIngredient.classList.remove('active');
+            
+            if (searchTerm.length < 2) {
+                searchResults.classList.remove('active');
+                return;
+            }
+            
+            searchTimeout = setTimeout(() => {
+                const filteredIngredients = ingredientsList.filter(ing => 
+                    ing.nombre.toLowerCase().includes(searchTerm)
+                ).sort((a, b) => {
+                    // Exact matches first, then by name length, then alphabetically
+                    const aExact = a.nombre.toLowerCase() === searchTerm;
+                    const bExact = b.nombre.toLowerCase() === searchTerm;
+                    if (aExact && !bExact) return -1;
+                    if (!aExact && bExact) return 1;
+                    return a.nombre.length - b.nombre.length || 
+                           a.nombre.localeCompare(b.nombre);
+                }).slice(0, 10); // Limit to 10 results
+                
+                renderSearchResults(filteredIngredients);
+            }, 300);
+        });
+        
+        // Close search results when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.ingredient-search-container')) {
+                searchResults.classList.remove('active');
+            }
+        });
+        
+        function renderSearchResults(results) {
+            searchResults.innerHTML = '';
+            
+            if (results.length === 0) {
+                searchResults.innerHTML = '<div class="ingredient-result-item">No se encontraron ingredientes</div>';
+            } else {
+                results.forEach(ing => {
+                    const div = document.createElement('div');
+                    div.className = 'ingredient-result-item';
+                    div.innerHTML = `
+                        <span>${ing.nombre}</span>
+                        <span class="unit">${ing.unidad_medida}</span>
+                    `;
+                    div.addEventListener('click', () => selectIngredient(ing));
+                    searchResults.appendChild(div);
+                });
+            }
+            
+            searchResults.classList.add('active');
+        }
+        
+        function selectIngredient(ingredient) {
+            ingredienteIdInput.value = ingredient.id;
+            ingredientSearch.value = ingredient.nombre;
+            selectedIngredientName.textContent = ingredient.nombre;
+            selectedIngredientUnit.textContent = `Unidad de medida: ${ingredient.unidad_medida}`;
+            selectedIngredient.classList.add('active');
+            searchResults.classList.remove('active');
+        }
+        
+        // Form submission
+        document.getElementById('composition-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!ingredienteIdInput.value) {
+                Toast.show('Por favor selecciona un ingrediente de la lista', 'error');
+                return;
+            }
+            
+            const cantidad = parseFloat(document.getElementById('cantidad').value);
+            if (isNaN(cantidad) || cantidad <= 0) {
+                Toast.show('Por favor ingresa una cantidad válida', 'error');
+                return;
+            }
+            
+            try {
+                const composition = {
+                    ingrediente_id: parseInt(ingredienteIdInput.value),
+                    cantidad: cantidad
+                };
+                
+                const response = await fetch(`/api/articulos/${articuloData.id}/composicion`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(composition)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Error al agregar el ingrediente');
+                }
+                
+                Toast.show('Ingrediente agregado correctamente', 'success');
+                
+                // Reset form
+                this.reset();
+                selectedIngredient.classList.remove('active');
+                
+                // Refresh the composition list
+                loadComposition(articuloData.id);
+                
+            } catch (error) {
+                Toast.show(`Error: ${error.message}`, 'error');
+            }
+        });
     });
     
     // Initialize customize composition button
