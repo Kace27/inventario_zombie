@@ -105,8 +105,17 @@ async function handleProductForm(event) {
         let response;
         
         if (productId) {
+            // Check if it's a parent product and has the propagate price checkbox
+            const propagatePrice = formData.get('propagate_price') === 'on';
+            const isParent = formData.get('es_variante') === '0';
+            
             // Update existing product
-            response = await API.put(API.endpoints.articulos.update(productId), product);
+            const endpoint = API.endpoints.articulos.update(productId);
+            // If it's a parent product and has propagate price enabled, add query param
+            const finalEndpoint = isParent && propagatePrice ? 
+                `${endpoint}?propagate_price=true` : endpoint;
+            
+            response = await API.put(finalEndpoint, product);
             Toast.show('Artículo actualizado correctamente', 'success');
         } else {
             // Create new product
@@ -131,31 +140,60 @@ async function handleProductForm(event) {
 async function handleCompositionForm(event) {
     event.preventDefault();
     
-    // Validate form
-    if (!Validator.validateForm(this)) {
+    // Get form elements
+    const ingredienteIdInput = document.getElementById('ingrediente_id');
+    const selectedIngredient = document.querySelector('.selected-ingredient');
+    
+    // Validate ingredient selection
+    if (!ingredienteIdInput.value) {
+        Toast.show('Por favor selecciona un ingrediente de la lista', 'error');
         return;
     }
     
-    const formData = new FormData(this);
-    const articleId = formData.get('articulo_id');
-    const ingredientId = formData.get('ingrediente_id');
-    const cantidad = parseFloat(formData.get('cantidad')) || 0;
+    // Validate quantity
+    const cantidad = parseFloat(document.getElementById('cantidad').value);
+    if (isNaN(cantidad) || cantidad <= 0) {
+        Toast.show('Por favor ingresa una cantidad válida', 'error');
+        return;
+    }
     
     try {
+        const formData = new FormData(this);
+        const articleId = formData.get('articulo_id');
         const composition = {
-            ingrediente_id: ingredientId,
+            ingrediente_id: parseInt(ingredienteIdInput.value),
             cantidad: cantidad
         };
         
-        await API.post(API.endpoints.articulos.addComposicion(articleId), composition);
+        // Check if the aplicar_a_variantes checkbox exists and is checked
+        const aplicarAVariantesCheckbox = document.getElementById('aplicar_a_variantes');
+        if (aplicarAVariantesCheckbox) {
+            composition.aplicar_a_variantes = aplicarAVariantesCheckbox.checked;
+        }
+        
+        const response = await fetch(`/api/articulos/${articleId}/composicion`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(composition)
+        });
+        
+        if (!response.ok) {
+            throw new Error('Error al agregar el ingrediente');
+        }
+        
         Toast.show('Ingrediente agregado correctamente', 'success');
         
-        // Refresh the composition list
-        loadComposition(articleId);
+        // Reset form
+        this.reset();
+        selectedIngredient.classList.remove('active');
         
-        // Reset the form fields
-        document.getElementById('ingrediente_id').value = '';
-        document.getElementById('cantidad').value = '';
+        // Refresh the composition list
+        if (typeof loadComposition === 'function') {
+            loadComposition(articleId);
+        }
+        
     } catch (error) {
         Toast.show(`Error: ${error.message}`, 'error');
     }

@@ -15,6 +15,7 @@
 <form id="product-form" class="mobile-form">
     {% if articulo %}
     <input type="hidden" name="id" value="{{ articulo.id }}">
+    <input type="hidden" name="es_variante" value="{{ '1' if articulo.es_variante else '0' }}">
     {% endif %}
     
     <div class="form-group">
@@ -49,6 +50,16 @@
                    value="{{ articulo.precio_venta if articulo else '' }}">
         </div>
     </div>
+
+    {% if articulo and not articulo.es_variante and variantes|length > 0 %}
+    <div class="form-group">
+        <div class="checkbox-container">
+            <input type="checkbox" id="propagate_price" name="propagate_price" class="form-checkbox">
+            <label for="propagate_price">Aplicar cambios de precio a todas las variantes</label>
+        </div>
+        <small class="form-text text-muted">Al activar esta opción, el precio de venta se actualizará en todas las variantes de este artículo. Los cambios de nombre y categorías siempre se propagan a las variantes.</small>
+    </div>
+    {% endif %}
 
     {% if articulo %}
     <!-- Sección de Variantes -->
@@ -177,6 +188,24 @@
     color: #6c757d;
     font-size: 0.875rem;
     margin-top: 0.25rem;
+}
+
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.form-checkbox {
+    margin-right: 0.5rem;
+    width: 18px;
+    height: 18px;
+}
+
+.checkbox-container label {
+    margin-bottom: 0;
+    font-weight: normal;
+    cursor: pointer;
 }
 </style>
 {% endblock %}

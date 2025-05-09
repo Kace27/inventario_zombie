@@ -37,6 +37,12 @@
         margin-left: 10px;
     }
     
+    .page-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    
     .ingredient-search-container {
         position: relative;
         margin-bottom: 15px;
@@ -118,9 +124,16 @@
 {% block content %}
 <div class="page-header">
     <h1>Composición: {{ articulo.nombre }}</h1>
-    <a href="{{ url_for('articulos_web.index') }}" class="btn btn-secondary">
-        <i class="fas fa-arrow-left"></i> Volver
-    </a>
+    <div class="page-actions">
+        <a href="{{ url_for('articulos_web.index') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>
+        {% if not articulo.es_variante and variantes|length > 0 %}
+        <button id="sync-variants-btn" class="btn btn-primary">
+            <i class="fas fa-sync"></i> Sincronizar Variantes
+        </button>
+        {% endif %}
+    </div>
 </div>
 
 <div class="product-details">
@@ -217,6 +230,16 @@
                 <input type="number" id="cantidad" name="cantidad" step="0.01" min="0.01" required>
             </div>
             
+            {% if not articulo.es_variante and variantes|length > 0 %}
+            <div class="form-group">
+                <div class="checkbox-container">
+                    <input type="checkbox" id="aplicar_a_variantes" name="aplicar_a_variantes" class="form-checkbox" checked>
+                    <label for="aplicar_a_variantes">Aplicar a todas las variantes</label>
+                </div>
+                <small class="form-text text-muted">Al activar esta opción, el ingrediente se agregará a todas las variantes con la misma cantidad.</small>
+            </div>
+            {% endif %}
+            
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-plus"></i> Agregar
@@ -258,7 +281,8 @@
         'id': articulo.id,
         'precioVenta': articulo.precio_venta,
         'esVariante': articulo.es_variante,
-        'articuloPadreId': articulo.articulo_padre_id
+        'articuloPadreId': articulo.articulo_padre_id,
+        'tieneVariantes': variantes|length > 0
     }|tojson|safe }};
     
     // When page loads, initialize delete buttons and customize button
@@ -274,6 +298,7 @@
         
         initDeleteCompositionButtons();
         initCustomizeButton();
+        initSyncVariantsButton();
         
         // Search functionality
         ingredientSearch.addEventListener('input', function() {
@@ -343,52 +368,8 @@
             searchResults.classList.remove('active');
         }
         
-        // Form submission
-        document.getElementById('composition-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            if (!ingredienteIdInput.value) {
-                Toast.show('Por favor selecciona un ingrediente de la lista', 'error');
-                return;
-            }
-            
-            const cantidad = parseFloat(document.getElementById('cantidad').value);
-            if (isNaN(cantidad) || cantidad <= 0) {
-                Toast.show('Por favor ingresa una cantidad válida', 'error');
-                return;
-            }
-            
-            try {
-                const composition = {
-                    ingrediente_id: parseInt(ingredienteIdInput.value),
-                    cantidad: cantidad
-                };
-                
-                const response = await fetch(`/api/articulos/${articuloData.id}/composicion`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(composition)
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Error al agregar el ingrediente');
-                }
-                
-                Toast.show('Ingrediente agregado correctamente', 'success');
-                
-                // Reset form
-                this.reset();
-                selectedIngredient.classList.remove('active');
-                
-                // Refresh the composition list
-                loadComposition(articuloData.id);
-                
-            } catch (error) {
-                Toast.show(`Error: ${error.message}`, 'error');
-            }
-        });
+        // Initialize forms
+        initForms();
     });
     
     // Initialize customize composition button
@@ -416,6 +397,35 @@
         }
     }
     
+    // Initialize sync variants button
+    function initSyncVariantsButton() {
+        const syncBtn = document.getElementById('sync-variants-btn');
+        if (syncBtn) {
+            syncBtn.addEventListener('click', async function() {
+                if (confirm('¿Estás seguro de sincronizar la composición con todas las variantes? Esto aplicará todos los ingredientes de este artículo a todas sus variantes.')) {
+                    try {
+                        const response = await fetch(`/api/articulos/${articuloData.id}/sincronizar-variantes`, {
+                            method: 'POST'
+                        });
+                        
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.error || 'Error al sincronizar las variantes');
+                        }
+                        
+                        const data = await response.json();
+                        Toast.show(`Composición sincronizada exitosamente con ${data.variants_updated || 0} variante(s)`, 'success');
+                        
+                        // Reload the composition to reflect any changes
+                        loadComposition(articuloData.id);
+                    } catch (error) {
+                        Toast.show(`Error: ${error.message}`, 'error');
+                    }
+                }
+            });
+        }
+    }
+    
     // Load the composition data
     function loadComposition(articleId) {
         const url = `/api/articulos/${articleId}/composicion`;
@@ -428,6 +438,9 @@
                 return response.json();
             })
             .then(data => {
+                // Update the articuloData with the latest variants information
+                articuloData.tieneVariantes = data.variantes_count > 0;
+                
                 updateCompositionList(data.composicion || data);
                 updateCostSummary(data.composicion || data);
             })
@@ -488,23 +501,49 @@
                 const id = newButton.dataset.id;
                 const ingredientName = newButton.dataset.ingrediente;
                 
-                if (confirm(`¿Estás seguro de eliminar ${ingredientName} de la composición?`)) {
-                    try {
-                        const endpoint = `/api/composicion/${id}`;
-                        const response = await fetch(endpoint, {
-                            method: 'DELETE'
-                        });
-                        
-                        if (!response.ok) {
-                            throw new Error('Error al eliminar el ingrediente');
-                        }
-                        
-                        // Reload composition data
-                        loadComposition(articuloData.id);
-                        Toast.show('Ingrediente eliminado correctamente');
-                    } catch (error) {
-                        Toast.show(`Error: ${error.message}`, 'error');
+                // Only ask about applying to variants for parent articles with variants
+                let aplicarAVariantes = false;
+                
+                if (!articuloData.esVariante && articuloData.tieneVariantes) {
+                    if (confirm(`¿Estás seguro de eliminar ${ingredientName} de la composición?`)) {
+                        aplicarAVariantes = confirm(`¿Deseas eliminar este ingrediente también de todas las variantes?`);
+                    } else {
+                        return; // User cancelled the first confirmation
                     }
+                } else {
+                    // Regular confirmation for variants or products without variants
+                    if (!confirm(`¿Estás seguro de eliminar ${ingredientName} de la composición?`)) {
+                        return;
+                    }
+                }
+                
+                try {
+                    let endpoint = `/api/composicion/${id}`;
+                    if (aplicarAVariantes) {
+                        endpoint += `?aplicar_a_variantes=true`;
+                    }
+                    
+                    const response = await fetch(endpoint, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Error al eliminar el ingrediente');
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // Show specific message if it was also deleted from variants
+                    if (data.deleted_from_variants && data.deleted_from_variants.length > 0) {
+                        Toast.show(`Ingrediente eliminado correctamente de este artículo y ${data.deleted_from_variants.length} variante(s)`);
+                    } else {
+                        Toast.show('Ingrediente eliminado correctamente');
+                    }
+                    
+                    // Reload composition data
+                    loadComposition(articuloData.id);
+                } catch (error) {
+                    Toast.show(`Error: ${error.message}`, 'error');
                 }
             });
         });

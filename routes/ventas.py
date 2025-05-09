@@ -623,6 +623,7 @@ def get_ventas():
     - fecha_fin: End date (YYYY-MM-DD)
     - articulo: Filter by article name
     - categoria: Filter by category
+    - tickets: Comma-separated list of ticket numbers
     - limit: Maximum number of records to return
     - offset: Number of records to skip
     
@@ -653,18 +654,25 @@ def get_ventas():
         if 'categoria' in request.args:
             query += " AND categoria LIKE ?"
             params.append(f"%{request.args['categoria']}%")
+            
+        if 'tickets' in request.args:
+            tickets = request.args['tickets'].split(',')
+            placeholders = ','.join(['?' for _ in tickets])
+            query += f" AND ticket IN ({placeholders})"
+            params.extend(tickets)
         
         # Add sorting
         query += " ORDER BY fecha DESC, hora DESC"
         
-        # Add pagination
-        if 'limit' in request.args:
-            query += " LIMIT ?"
-            params.append(int(request.args['limit']))
-        
-        if 'offset' in request.args:
-            query += " OFFSET ?"
-            params.append(int(request.args['offset']))
+        # Add pagination only if not filtering by specific tickets
+        if 'tickets' not in request.args:
+            if 'limit' in request.args:
+                query += " LIMIT ?"
+                params.append(int(request.args['limit']))
+            
+            if 'offset' in request.args:
+                query += " OFFSET ?"
+                params.append(int(request.args['offset']))
         
         # Execute the query
         cursor.execute(query, params)
@@ -757,4 +765,56 @@ def reset_ventas():
         return jsonify({
             "success": False,
             "error": f"Error al resetear ventas: {str(e)}"
-        }), 500 
+        }), 500
+
+@bp.route('/tickets', methods=['GET'])
+def get_tickets():
+    """
+    Get paginated unique ticket numbers.
+    
+    Query parameters:
+    - limit: Maximum number of tickets to return
+    - offset: Number of tickets to skip
+    
+    Returns:
+    - JSON response with ticket numbers and total count
+    """
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        
+        # Get total count of unique tickets
+        cursor.execute("SELECT COUNT(DISTINCT ticket) as count FROM Ventas WHERE ticket IS NOT NULL")
+        total_tickets = cursor.fetchone()['count']
+        
+        # Base query for unique tickets
+        query = """
+            SELECT DISTINCT ticket 
+            FROM Ventas 
+            WHERE ticket IS NOT NULL 
+            ORDER BY fecha DESC, hora DESC
+        """
+        params = []
+        
+        # Add pagination
+        if 'limit' in request.args:
+            query += " LIMIT ?"
+            params.append(int(request.args['limit']))
+        
+        if 'offset' in request.args:
+            query += " OFFSET ?"
+            params.append(int(request.args['offset']))
+        
+        # Execute the query
+        cursor.execute(query, params)
+        tickets = [row['ticket'] for row in cursor.fetchall()]
+        
+        return jsonify({
+            "success": True,
+            "tickets": tickets,
+            "total_tickets": total_tickets
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error getting tickets: {str(e)}")
+        return handle_error(e, "Error retrieving tickets") 

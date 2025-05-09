@@ -356,11 +356,75 @@ def update_articulo(id):
     
     # Execute the update
     try:
+        # Begin transaction
+        db.execute('BEGIN TRANSACTION')
+        
         params.append(id)
         db.execute(
             f'UPDATE ArticulosVendidos SET {", ".join(updates)} WHERE id = ?',
             params
         )
+        
+        # If this is a parent article (not a variant), update all its variants with the same changes
+        # but preserve their specific variant names and any variant-specific pricing
+        if articulo['es_variante'] == 0:
+            # Get all variants of this parent article
+            cursor = db.execute('SELECT id, nombre FROM ArticulosVendidos WHERE articulo_padre_id = ?', (id,))
+            variants = cursor.fetchall()
+            
+            # Update each variant if we have variants
+            if variants:
+                variant_updates = []
+                variant_params = []
+                
+                # Only propagate category and subcategory updates to variants
+                # Don't update the name because variants have their own names
+                # Don't update the precio_venta by default to preserve variant-specific pricing
+                if 'categoria' in data:
+                    variant_updates.append('categoria = ?')
+                    variant_params.append(data['categoria'])
+                
+                if 'subcategoria' in data:
+                    variant_updates.append('subcategoria = ?')
+                    variant_params.append(data['subcategoria'])
+                
+                # Only apply precio_venta update if specifically requested by adding a parameter
+                # This could be controlled via a checkbox in the UI
+                propagate_price = request.args.get('propagate_price', 'false').lower() == 'true'
+                if 'precio_venta' in data and propagate_price:
+                    variant_updates.append('precio_venta = ?')
+                    variant_params.append(data['precio_venta'])
+                
+                # Update variants if there are any changes to apply
+                if variant_updates:
+                    # For each variant, update with the parent's changes
+                    for variant in variants:
+                        # If the parent name changed and the variant name includes the parent name, update it
+                        if 'nombre' in data and data['nombre'] is not None:
+                            # Get the current variant name
+                            variant_name = variant['nombre']
+                            
+                            # Check if the variant name contains the parent name
+                            if articulo['nombre'] in variant_name:
+                                # Replace the old parent name with the new one
+                                new_variant_name = variant_name.replace(articulo['nombre'], data['nombre'])
+                                
+                                # Add name update for this variant
+                                db.execute(
+                                    'UPDATE ArticulosVendidos SET nombre = ? WHERE id = ?',
+                                    (new_variant_name, variant['id'])
+                                )
+                        
+                        # Apply the other updates to the variant
+                        if variant_updates:
+                            variant_update_params = variant_params.copy()
+                            variant_update_params.append(variant['id'])
+                            db.execute(
+                                f'UPDATE ArticulosVendidos SET {", ".join(variant_updates)} WHERE id = ?',
+                                variant_update_params
+                            )
+        
+        # Commit all changes
         db.commit()
         
         # Get the updated product with parent info
@@ -383,8 +447,12 @@ def update_articulo(id):
             'articulo_padre_nombre': updated_articulo['articulo_padre_nombre']
         })
     except db.IntegrityError:
+        # Rollback in case of error
+        db.execute('ROLLBACK')
         return jsonify({'error': 'Product name already exists'}), 409
     except Exception as e:
+        # Rollback in case of error
+        db.execute('ROLLBACK')
         return jsonify({'error': str(e)}), 500
 
 @articulos_bp.route('/<int:id>', methods=['DELETE'])

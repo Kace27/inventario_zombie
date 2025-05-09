@@ -24,7 +24,7 @@ def get_composicion(articulo_id):
     cursor = db.execute(
         '''
         SELECT c.id, c.articulo_id, c.ingrediente_id, c.cantidad, 
-               i.nombre as ingrediente_nombre, i.unidad_medida
+               i.nombre as ingrediente_nombre, i.unidad_medida, i.precio_compra
         FROM ComposicionArticulo c
         JOIN Ingredientes i ON c.ingrediente_id = i.id
         WHERE c.articulo_id = ?
@@ -38,7 +38,8 @@ def get_composicion(articulo_id):
         ingrediente_id=row['ingrediente_id'],
         cantidad=row['cantidad'],
         ingrediente_nombre=row['ingrediente_nombre'],
-        unidad_medida=row['unidad_medida']
+        unidad_medida=row['unidad_medida'],
+        precio_compra=row['precio_compra']
     ) for row in cursor.fetchall()]
     
     # Get the variant information if this is a variant
@@ -54,10 +55,12 @@ def get_composicion(articulo_id):
     
     # Get all variants if this is a parent product
     variants_info = []
+    variantes_count = 0
     cursor = db.execute('SELECT id, nombre FROM ArticulosVendidos WHERE articulo_padre_id = ?', (articulo_id,))
     variants = cursor.fetchall()
     if variants:
         variants_info = [dict(id=v['id'], nombre=v['nombre']) for v in variants]
+        variantes_count = len(variants_info)
     
     return jsonify({
         'articulo_id': articulo_id,
@@ -65,6 +68,7 @@ def get_composicion(articulo_id):
         'es_variante': articulo['es_variante'],
         'articulo_padre': parent_info,
         'variantes': variants_info,
+        'variantes_count': variantes_count,
         'composicion': composicion
     })
 
@@ -360,7 +364,7 @@ def sincronizar_composicion_variantes(articulo_id):
         variants = cursor.fetchall()
         
         if not variants:
-            return jsonify({'message': 'No variants found for this product'}), 200
+            return jsonify({'message': 'No variants found for this product', 'variants_updated': 0}), 200
         
         # Get the parent product's composition
         cursor = db.execute(
@@ -370,10 +374,11 @@ def sincronizar_composicion_variantes(articulo_id):
         parent_composition = cursor.fetchall()
         
         if not parent_composition:
-            return jsonify({'message': 'Parent product has no composition to synchronize'}), 200
+            return jsonify({'message': 'Parent product has no composition to synchronize', 'variants_updated': 0}), 200
         
         # Track changes for each variant
         changes = []
+        variants_updated = 0
         
         # Process each variant
         for variant in variants:
@@ -434,13 +439,15 @@ def sincronizar_composicion_variantes(articulo_id):
             # Add to changes if any were made
             if variant_changes['added'] or variant_changes['updated'] or variant_changes['deleted']:
                 changes.append(variant_changes)
+                variants_updated += 1
         
         db.commit()
         
         return jsonify({
-            'message': f'Successfully synchronized composition for {len(changes)} variants',
+            'message': 'Variants synchronized successfully',
+            'variants_updated': variants_updated,
             'changes': changes
         })
     except Exception as e:
-        db.rollback()
+        db.execute('ROLLBACK')
         return jsonify({'error': str(e)}), 500 
