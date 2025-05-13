@@ -436,11 +436,15 @@ def importar_recibos():
                                 })
                                 continue
                         
-                        # If we have a variant, check if it exists or create it
+                        # Si tenemos una variante, verificar si existe o crearla
+                        articulo_id = parent_result['id']
+                        
                         if variant != "Sin variante":
+                            # Crear un nombre único para la variante en ArticulosVendidos
                             variant_name = f"{product_name} - {variant}"
+                            
                             cursor.execute(
-                                "SELECT id, precio_venta FROM ArticulosVendidos WHERE nombre = ? AND es_variante = 1",
+                                "SELECT id FROM ArticulosVendidos WHERE nombre = ? AND es_variante = 1",
                                 (variant_name,)
                             )
                             variant_result = cursor.fetchone()
@@ -455,30 +459,26 @@ def importar_recibos():
                                         """,
                                         (variant_name, categoria, precio_unitario, parent_result['id'])
                                     )
+                                    articulo_id = cursor.lastrowid
                                     created_articles_count += 1
                                     current_app.logger.info(f"Created new variant: {variant_name}")
-                                    
-                                    # Use the variant's information for the sale
-                                    articulo_nombre = variant_name
                                 except sqlite3.Error as e:
                                     current_app.logger.error(f"Error creating variant {variant_name}: {str(e)}")
                                     errors.append({
-                                        "product": variant_name,
+                                        "product": product_name,
                                         "error": f"Error creating variant: {str(e)}"
                                     })
                                     continue
                             else:
-                                articulo_nombre = variant_name
-                        else:
-                            articulo_nombre = product_name
+                                articulo_id = variant_result['id']
                         
-                        # Prepare the sales data
+                        # Prepare the sales data - usar el nombre base del artículo en Ventas
                         sale_data = {
                             'fecha': formatted_date,
                             'hora': receipt_time,
-                            'articulo': articulo_nombre,
+                            'articulo': product_name,  # Usar el nombre base del artículo
                             'categoria': categoria,
-                            'subcategoria': variant if variant != "Sin variante" else None,
+                            'subcategoria': variant if variant != "Sin variante" else None,  # Guardar la variante en subcategoria
                             'articulos_vendidos': quantity,
                             'precio_unitario': precio_unitario,
                             'total': precio_unitario * quantity,
@@ -502,6 +502,54 @@ def importar_recibos():
                             tuple(sale_data.values())
                         )
                         inserted_count += 1
+                        
+                        # Actualizar el inventario basado en la composición del artículo
+                        cursor.execute(
+                            """
+                            SELECT id FROM ArticulosVendidos 
+                            WHERE nombre = ? AND (es_variante = 1 OR es_variante = 0)
+                            """,
+                            (product_name,)
+                        )
+                        articulo_result = cursor.fetchone()
+                        
+                        if articulo_result:
+                            articulo_id = articulo_result['id']
+                            
+                            # Obtener la composición del artículo
+                            cursor.execute(
+                                """
+                                SELECT ca.ingrediente_id, ca.cantidad, i.nombre
+                                FROM ComposicionArticulo ca
+                                JOIN Ingredientes i ON ca.ingrediente_id = i.id
+                                WHERE ca.articulo_id = ?
+                                """,
+                                (articulo_id,)
+                            )
+                            composition = cursor.fetchall()
+                            
+                            # Si tiene composición, actualizar el inventario
+                            if composition:
+                                for comp_row in composition:
+                                    ingrediente_id = comp_row['ingrediente_id']
+                                    cantidad_por_unidad = comp_row['cantidad']
+                                    
+                                    # Calcular cantidad total a reducir
+                                    cantidad_total = cantidad_por_unidad * quantity
+                                    
+                                    # Actualizar el inventario
+                                    cursor.execute(
+                                        """
+                                        UPDATE Ingredientes
+                                        SET cantidad_actual = cantidad_actual - ?
+                                        WHERE id = ?
+                                        """,
+                                        (cantidad_total, ingrediente_id)
+                                    )
+                                    current_app.logger.info(
+                                        f"Actualizando inventario para {comp_row['nombre']}: "
+                                        f"-{cantidad_total} ({cantidad_por_unidad} x {quantity})"
+                                    )
                     
                     except sqlite3.Error as e:
                         current_app.logger.error(f"Error processing product {product_name}: {str(e)}")

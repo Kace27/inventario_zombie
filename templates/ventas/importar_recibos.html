@@ -315,6 +315,8 @@
                 return;
             }
             
+            console.log("Processing file:", file.name, "Size:", file.size, "bytes");
+            
             if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
                 showStatus('error', 'Error de archivo', 'Por favor, selecciona un archivo CSV válido.');
                 return;
@@ -335,6 +337,8 @@
             
             reader.onload = function(e) {
                 const contents = e.target.result;
+                console.log("First 100 characters of file:", contents.substring(0, 100));
+                
                 const rows = contents.split('\n');
                 
                 if (rows.length < 2) {
@@ -343,10 +347,29 @@
                 }
                 
                 csvHeaders = parseCSVRow(rows[0]);
+                console.log("CSV Headers detected:", csvHeaders);
+                
+                // Normalize function to remove accents and lowercase
+                const normalize = (str) => {
+                    return str.toLowerCase()
+                        .normalize("NFD")
+                        .replace(/[\u0300-\u036f]/g, "")
+                        .trim();
+                };
                 
                 // Verificar columnas requeridas para el nuevo formato
-                const requiredColumns = ['Fecha', 'Número de recibo', 'Artículo', 'Cantidad', 'Ventas brutas'];
-                const missingColumns = requiredColumns.filter(col => !csvHeaders.includes(col));
+                const requiredColumns = ['Articulo', 'Cantidad'];
+                const normalizedHeaders = csvHeaders.map(h => normalize(h));
+                console.log("Normalized headers:", normalizedHeaders);
+                
+                const missingColumns = requiredColumns.filter(col => {
+                    const normalizedCol = normalize(col);
+                    const found = normalizedHeaders.includes(normalizedCol);
+                    console.log(`Checking for column '${col}' (normalized: '${normalizedCol}'): ${found ? 'found' : 'not found'}`);
+                    return !found;
+                });
+                
+                console.log("Missing columns:", missingColumns);
                 
                 if (missingColumns.length > 0) {
                     showStatus('error', 'Error de formato', 
@@ -373,25 +396,48 @@
         
         // Function to parse a CSV row
         function parseCSVRow(row) {
+            // Use a more robust CSV parsing approach
             const result = [];
+            let cell = '';
             let inQuotes = false;
-            let currentValue = '';
             
             for (let i = 0; i < row.length; i++) {
                 const char = row[i];
+                const nextChar = row[i + 1];
                 
-                if (char === '"' && (i === 0 || row[i - 1] !== '\\')) {
-                    inQuotes = !inQuotes;
-                } else if (char === ',' && !inQuotes) {
-                    result.push(currentValue);
-                    currentValue = '';
+                if (inQuotes) {
+                    if (char === '"') {
+                        if (nextChar === '"') {
+                            // Escaped quote
+                            cell += '"';
+                            i++; // Skip the next quote
+                        } else {
+                            // End of quoted field
+                            inQuotes = false;
+                        }
+                    } else {
+                        // Regular character inside quotes
+                        cell += char;
+                    }
                 } else {
-                    currentValue += char;
+                    if (char === '"') {
+                        // Start of quoted field
+                        inQuotes = true;
+                    } else if (char === ',') {
+                        // End of field
+                        result.push(cell);
+                        cell = '';
+                    } else {
+                        // Regular character
+                        cell += char;
+                    }
                 }
             }
             
-            result.push(currentValue);
-            return result;
+            // Add the last cell
+            result.push(cell);
+            
+            return result.map(field => field.trim());
         }
         
         // Function to show preview
@@ -575,7 +621,14 @@
         
         // Function to reset UI
         function resetUI() {
-            fileInput.value = '';
+            // Clear the file input and its value
+            const newFileInput = fileInput.cloneNode(true);
+            fileInput.parentNode.replaceChild(newFileInput, fileInput);
+            fileInput = newFileInput;
+            
+            // Re-attach event listener to new file input
+            fileInput.addEventListener('change', handleFileSelect);
+            
             csvFile = null;
             csvHeaders = [];
             csvData = [];
@@ -586,6 +639,9 @@
             statusContainer.style.display = 'none';
             resultsContainer.style.display = 'none';
         }
+        
+        // Clear any cached files on page load
+        resetUI();
     });
 </script>
 {% endblock %} 
