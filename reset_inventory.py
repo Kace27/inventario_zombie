@@ -1,90 +1,117 @@
-# reset_inventory.py
-
+#!/usr/bin/env python3
 import sqlite3
-from datetime import datetime
-import sys
 import os
-
-def get_db_path():
-    # Asumiendo que el script está en el directorio raíz del proyecto
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'inventario.db')
+from datetime import datetime
 
 def reset_inventory():
-    print("\n¡ADVERTENCIA! Este script reseteará TODAS las cantidades del inventario a 0.")
-    print("Este es un script de DEBUG y NO debe usarse en producción.")
-    print("Se registrará cada cambio en la tabla AjustesInventario para mantener el historial.\n")
+    """
+    Resetea todas las cantidades del inventario a 0 y registra los ajustes.
+    """
+    # Ruta absoluta de la base de datos
+    db_path = '/home/Kace/inventario_zombie/instance/inventario_zombie.sqlite'
     
-    confirmation = input("Escribe 'RESET' para confirmar el reseteo del inventario: ")
+    print("\n=== RESET DE INVENTARIO ===")
+    print("Este script pondrá TODAS las cantidades en 0.")
+    print(f"Base de datos: {db_path}\n")
     
-    if confirmation != "RESET":
+    # Verificar que la base de datos existe
+    if not os.path.exists(db_path):
+        print(f"ERROR: No se encontró la base de datos en: {db_path}")
+        return
+    
+    confirmacion = input("Escribe 'RESET' para continuar: ")
+    if confirmacion != "RESET":
         print("Operación cancelada.")
         return
     
+    # Conectar a la base de datos
+    conn = None
     try:
-        # Conectar a la base de datos
-        db_path = get_db_path()
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         
-        # Obtener todos los ingredientes con cantidad > 0
+        # Verificar el estado actual del inventario
+        cursor.execute("SELECT id, nombre, cantidad_actual, unidad_medida FROM Ingredientes ORDER BY nombre")
+        todos_ingredientes = cursor.fetchall()
+        
+        if not todos_ingredientes:
+            print("No hay ingredientes en la base de datos.")
+            return
+            
+        print("\nEstado actual del inventario:")
+        for ing in todos_ingredientes:
+            print(f"- {ing[1]}: {ing[2]} {ing[3]}")
+        
+        # Obtener ingredientes con cantidad distinta de 0
         cursor.execute("""
             SELECT id, nombre, cantidad_actual, unidad_medida 
             FROM Ingredientes 
-            WHERE cantidad_actual > 0
+            WHERE cantidad_actual != 0
+            ORDER BY nombre
         """)
-        ingredientes = cursor.fetchall()
+        ingredientes_a_resetear = cursor.fetchall()
         
-        if not ingredientes:
-            print("No hay ingredientes con cantidades mayores a 0.")
+        if not ingredientes_a_resetear:
+            print("\nNo hay ingredientes para resetear (todos están en 0).")
             return
         
-        print(f"\nSe encontraron {len(ingredientes)} ingredientes para resetear:")
-        for ing in ingredientes:
+        print(f"\nSe resetearán {len(ingredientes_a_resetear)} ingredientes:")
+        for ing in ingredientes_a_resetear:
             print(f"- {ing[1]}: {ing[2]} {ing[3]}")
         
-        final_confirmation = input("\n¿Proceder con el reseteo? (s/N): ")
-        if final_confirmation.lower() != 's':
+        # Confirmar una última vez
+        confirmacion_final = input("\n¿Proceder con el reseteo? (s/N): ")
+        if confirmacion_final.lower() != 's':
             print("Operación cancelada.")
             return
         
-        # Iniciar transacción
-        cursor.execute("BEGIN TRANSACTION")
+        # Iniciar la transacción
+        conn.execute("BEGIN")
         
-        fecha_actual = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        motivo = "Reset de debug - Reseteo manual de inventario"
+        # Registrar los ajustes
+        fecha = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        motivo = "Reset manual de inventario"
         
-        # Resetear cada ingrediente y registrar el ajuste
-        for ing_id, nombre, cantidad_actual, _ in ingredientes:
-            # Registrar el ajuste
+        # Insertar los ajustes para cada ingrediente
+        for ing_id, nombre, cantidad_actual, _ in ingredientes_a_resetear:
             cursor.execute("""
                 INSERT INTO AjustesInventario 
                 (ingrediente_id, cantidad_ajustada, motivo, fecha_ajuste)
                 VALUES (?, ?, ?, ?)
-            """, (ing_id, -cantidad_actual, motivo, fecha_actual))
-            
-            # Actualizar la cantidad a 0
-            cursor.execute("""
-                UPDATE Ingredientes 
-                SET cantidad_actual = 0 
-                WHERE id = ?
-            """, (ing_id,))
+            """, (ing_id, -cantidad_actual, motivo, fecha))
         
-        # Confirmar transacción
+        # Actualizar todas las cantidades a 0 en una sola operación
+        cursor.execute("UPDATE Ingredientes SET cantidad_actual = 0")
+        
+        # Verificar que todas las cantidades sean 0
+        cursor.execute("SELECT COUNT(*) FROM Ingredientes WHERE cantidad_actual != 0")
+        remaining = cursor.fetchone()[0]
+        
+        if remaining > 0:
+            raise Exception(f"Error: {remaining} ingredientes no se resetearon correctamente")
+        
+        # Confirmar los cambios
         conn.commit()
-        print("\n¡Reseteo completado!")
-        print(f"Se resetearon {len(ingredientes)} ingredientes.")
-        print("Todos los cambios fueron registrados en la tabla AjustesInventario.")
         
-    except sqlite3.Error as e:
-        print(f"\nError en la base de datos: {e}")
-        print("Se ha revertido la operación.")
-        conn.rollback()
+        print("\n¡Reseteo completado exitosamente!")
+        print(f"Se resetearon {len(ingredientes_a_resetear)} ingredientes.")
+        print("Todos los cambios fueron registrados en AjustesInventario.")
+        
+        # Mostrar estado final
+        cursor.execute("SELECT nombre, cantidad_actual, unidad_medida FROM Ingredientes ORDER BY nombre")
+        estado_final = cursor.fetchall()
+        print("\nEstado final del inventario:")
+        for ing in estado_final:
+            print(f"- {ing[0]}: {ing[1]} {ing[2]}")
+        
     except Exception as e:
-        print(f"\nError inesperado: {e}")
-        print("Se ha revertido la operación.")
-        conn.rollback()
+        print(f"\nERROR: {str(e)}")
+        if conn:
+            conn.rollback()
+            print("Se han revertido todos los cambios.")
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 
 if __name__ == "__main__":
-    reset_inventory()
+    reset_inventory() 

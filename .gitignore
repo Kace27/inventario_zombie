@@ -1531,3 +1531,12 @@ venv/lib/python3.12/site-packages/urllib3-2.4.0.dist-info/METADATA
 venv/lib/python3.12/site-packages/urllib3-2.4.0.dist-info/RECORD
 venv/lib/python3.12/site-packages/urllib3-2.4.0.dist-info/WHEEL
 venv/lib/python3.12/site-packages/urllib3-2.4.0.dist-info/licenses/LICENSE.txt
+routes/.DS_Store
+routes/__pycache__/articulos.cpython-311.pyc
+routes/__pycache__/auth.cpython-311.pyc
+routes/__pycache__/composicion.cpython-311.pyc
+routes/__pycache__/recepciones.cpython-311.pyc
+routes/__pycache__/recepciones.cpython-312.pyc
+routes/__pycache__/ventas.cpython-311.pyc
+routes/__pycache__/ventas.cpython-312.pyc
+routes/__pycache__/web.cpython-311.pyc
