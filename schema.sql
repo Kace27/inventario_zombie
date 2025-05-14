@@ -2,6 +2,7 @@ DROP TABLE IF EXISTS Ingredientes;
 DROP TABLE IF EXISTS ArticulosVendidos;
 DROP TABLE IF EXISTS ComposicionArticulo;
 DROP TABLE IF EXISTS Ventas;
+DROP TABLE IF EXISTS RecepcionesDetalles;
 DROP TABLE IF EXISTS RecepcionesCocina;
 DROP TABLE IF EXISTS AjustesInventario;
 DROP TABLE IF EXISTS Usuarios;
@@ -77,11 +78,17 @@ CREATE TABLE RecibosImportados (
 
 CREATE TABLE RecepcionesCocina (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    ingrediente_id INTEGER NOT NULL,
-    cantidad_recibida REAL NOT NULL,
     fecha_recepcion TEXT NOT NULL,
     hora_recepcion TEXT NOT NULL,
-    notas TEXT,
+    notas TEXT
+);
+
+CREATE TABLE RecepcionesDetalles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    recepcion_id INTEGER NOT NULL,
+    ingrediente_id INTEGER NOT NULL,
+    cantidad_recibida REAL NOT NULL,
+    FOREIGN KEY (recepcion_id) REFERENCES RecepcionesCocina (id) ON DELETE CASCADE,
     FOREIGN KEY (ingrediente_id) REFERENCES Ingredientes (id)
 );
 

@@ -907,11 +907,27 @@
             // Get notes
             const notas = document.getElementById('notas').value;
             
-            // Process each ingredient separately as the API expects a single ingredient
-            const processIngredient = (index) => {
-                if (index >= ingredientItems.length) {
-                    // All ingredients processed successfully
-                    showStatus('success', 'Ingredientes registrados correctamente');
+            // Prepare the request data
+            const formData = {
+                ingredientes: ingredientItems,
+                notas: notas
+            };
+            
+            // Show loading status
+            showStatus('info', 'Registrando ingredientes...');
+            
+            // Send the request
+            fetch('/api/recepciones', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showStatus('success', 'Recepción registrada correctamente');
                     
                     // Reset form
                     document.getElementById('notas').value = '';
@@ -923,49 +939,16 @@
                     
                     // Close modal
                     closeModalHandler();
-                    return;
-                }
-                
-                const ingredient = ingredientItems[index];
-                const formData = {
-                    ingrediente_id: ingredient.ingrediente_id,
-                    cantidad_recibida: ingredient.cantidad_recibida,
-                    notas: notas
-                };
-                
-                fetch('/api/recepciones', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(formData)
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Continue with next ingredient
-                        processIngredient(index + 1);
-                    } else {
-                        showStatus('error', data.error || `Error al registrar ingrediente ${index + 1}`);
-                        // Close modal but don't reset form so user can try again
-                        closeModalHandler();
-                    }
-                })
-                .catch(error => {
-                    console.error('Error al registrar recepción:', error);
-                    showStatus('error', `Error al procesar ingrediente ${index + 1}`);
+                } else {
+                    showStatus('error', data.error || 'Error al registrar la recepción');
                     closeModalHandler();
-                });
-            };
-            
-            // Start processing ingredients
-            if (ingredientItems.length > 0) {
-                showStatus('info', 'Registrando ingredientes...');
-                processIngredient(0);
-            } else {
-                showStatus('error', 'No hay ingredientes seleccionados');
+                }
+            })
+            .catch(error => {
+                console.error('Error al registrar recepción:', error);
+                showStatus('error', 'Error al procesar la recepción');
                 closeModalHandler();
-            }
+            });
         }
         
         // Function to show status message

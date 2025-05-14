@@ -26,11 +26,15 @@ def get_recepciones():
         db = get_db()
         cursor = db.cursor()
         
-        # Base query with join to get ingredient name
+        # Base query with join to get ingredient details
         query = """
-            SELECT r.*, i.nombre as ingrediente_nombre, i.unidad_medida
+            SELECT 
+                r.id, r.fecha_recepcion, r.hora_recepcion, r.notas,
+                rd.ingrediente_id, rd.cantidad_recibida,
+                i.nombre as ingrediente_nombre, i.unidad_medida
             FROM RecepcionesCocina r
-            JOIN Ingredientes i ON r.ingrediente_id = i.id
+            JOIN RecepcionesDetalles rd ON r.id = rd.recepcion_id
+            JOIN Ingredientes i ON rd.ingrediente_id = i.id
             WHERE 1=1
         """
         params = []
@@ -45,7 +49,7 @@ def get_recepciones():
             params.append(request.args['fecha_fin'])
         
         if 'ingrediente_id' in request.args:
-            query += " AND r.ingrediente_id = ?"
+            query += " AND rd.ingrediente_id = ?"
             params.append(int(request.args['ingrediente_id']))
         
         # Add sorting
@@ -62,24 +66,33 @@ def get_recepciones():
         
         # Execute the query
         cursor.execute(query, params)
-        recepciones = cursor.fetchall()
+        recepciones_raw = cursor.fetchall()
         
-        # Convert to list of dictionaries
-        result = []
-        for recepcion in recepciones:
-            result.append({
-                'id': recepcion['id'],
-                'ingrediente_id': recepcion['ingrediente_id'],
-                'ingrediente_nombre': recepcion['ingrediente_nombre'],
-                'unidad_medida': recepcion['unidad_medida'],
-                'cantidad_recibida': recepcion['cantidad_recibida'],
-                'fecha_recepcion': recepcion['fecha_recepcion'],
-                'hora_recepcion': recepcion['hora_recepcion'],
-                'notas': recepcion['notas']
+        # Group by reception
+        recepciones_dict = {}
+        for row in recepciones_raw:
+            recepcion_id = row['id']
+            if recepcion_id not in recepciones_dict:
+                recepciones_dict[recepcion_id] = {
+                    'id': recepcion_id,
+                    'fecha_recepcion': row['fecha_recepcion'],
+                    'hora_recepcion': row['hora_recepcion'],
+                    'notas': row['notas'],
+                    'ingredientes': []
+                }
+            
+            recepciones_dict[recepcion_id]['ingredientes'].append({
+                'ingrediente_id': row['ingrediente_id'],
+                'ingrediente_nombre': row['ingrediente_nombre'],
+                'unidad_medida': row['unidad_medida'],
+                'cantidad_recibida': row['cantidad_recibida']
             })
         
+        # Convert to list
+        result = list(recepciones_dict.values())
+        
         # Get total count for pagination info
-        cursor.execute("SELECT COUNT(*) as count FROM RecepcionesCocina")
+        cursor.execute("SELECT COUNT(DISTINCT r.id) as count FROM RecepcionesCocina r")
         total = cursor.fetchone()['count']
         
         return jsonify({
@@ -98,8 +111,12 @@ def create_recepcion():
     
     Expected request body:
     {
-        "ingrediente_id": integer,
-        "cantidad_recibida": float,
+        "ingredientes": [
+            {
+                "ingrediente_id": integer,
+                "cantidad_recibida": float
+            }
+        ],
         "notas": string (optional)
     }
     
@@ -111,33 +128,46 @@ def create_recepcion():
         data = request.get_json()
         
         # Validate required fields
-        required_fields = ['ingrediente_id', 'cantidad_recibida']
-        validation_result = validate_required_fields(data, required_fields)
-        if not validation_result['valid']:
-            return jsonify({"success": False, "error": validation_result['error']}), 400
+        if 'ingredientes' not in data or not data['ingredientes']:
+            return jsonify({
+                "success": False,
+                "error": "Se requiere al menos un ingrediente"
+            }), 400
         
-        # Validate numeric values
-        numeric_fields = [('cantidad_recibida', 'float', 'Cantidad recibida debe ser un número')]
-        for field in numeric_fields:
-            validation_result = validate_numeric_value(data, field[0], field[1])
+        # Validate each ingredient entry
+        for ingrediente in data['ingredientes']:
+            if not isinstance(ingrediente, dict) or \
+               'ingrediente_id' not in ingrediente or \
+               'cantidad_recibida' not in ingrediente:
+                return jsonify({
+                    "success": False,
+                    "error": "Cada ingrediente debe tener ingrediente_id y cantidad_recibida"
+                }), 400
+            
+            # Validate numeric values
+            validation_result = validate_numeric_value(
+                ingrediente, 'cantidad_recibida', 'float'
+            )
             if not validation_result['valid']:
-                return jsonify({"success": False, "error": validation_result['error']}), 400
+                return jsonify({
+                    "success": False,
+                    "error": validation_result['error']
+                }), 400
         
-        # Validate that the ingredient exists
         db = get_db()
         cursor = db.cursor()
         
-        cursor.execute(
-            "SELECT id, nombre FROM Ingredientes WHERE id = ?",
-            (data['ingrediente_id'],)
-        )
-        ingrediente = cursor.fetchone()
-        
-        if not ingrediente:
-            return jsonify({
-                "success": False,
-                "error": f"No existe el ingrediente con ID {data['ingrediente_id']}"
-            }), 404
+        # Validate that all ingredients exist
+        for ingrediente in data['ingredientes']:
+            cursor.execute(
+                "SELECT id, nombre FROM Ingredientes WHERE id = ?",
+                (ingrediente['ingrediente_id'],)
+            )
+            if not cursor.fetchone():
+                return jsonify({
+                    "success": False,
+                    "error": f"No existe el ingrediente con ID {ingrediente['ingrediente_id']}"
+                }), 404
         
         # Get current date and time
         now = datetime.now()
@@ -152,30 +182,56 @@ def create_recepcion():
             cursor.execute(
                 """
                 INSERT INTO RecepcionesCocina 
-                (ingrediente_id, cantidad_recibida, fecha_recepcion, hora_recepcion, notas)
-                VALUES (?, ?, ?, ?, ?)
+                (fecha_recepcion, hora_recepcion, notas)
+                VALUES (?, ?, ?)
                 """,
-                (
-                    data['ingrediente_id'],
-                    data['cantidad_recibida'],
-                    fecha_recepcion,
-                    hora_recepcion,
-                    data.get('notas', '')
-                )
+                (fecha_recepcion, hora_recepcion, data.get('notas', ''))
             )
             
-            # Get the ID of the inserted record
+            # Get the ID of the inserted reception
             recepcion_id = cursor.lastrowid
             
-            # Update ingredient inventory
-            cursor.execute(
-                """
-                UPDATE Ingredientes
-                SET cantidad_actual = cantidad_actual + ?
-                WHERE id = ?
-                """,
-                (data['cantidad_recibida'], data['ingrediente_id'])
-            )
+            # Insert reception details and update inventory for each ingredient
+            ingredientes_info = []
+            for ingrediente in data['ingredientes']:
+                # Get ingredient info
+                cursor.execute(
+                    "SELECT nombre, unidad_medida FROM Ingredientes WHERE id = ?",
+                    (ingrediente['ingrediente_id'],)
+                )
+                ing_info = cursor.fetchone()
+                
+                # Insert reception detail
+                cursor.execute(
+                    """
+                    INSERT INTO RecepcionesDetalles 
+                    (recepcion_id, ingrediente_id, cantidad_recibida)
+                    VALUES (?, ?, ?)
+                    """,
+                    (
+                        recepcion_id,
+                        ingrediente['ingrediente_id'],
+                        ingrediente['cantidad_recibida']
+                    )
+                )
+                
+                # Update ingredient inventory
+                cursor.execute(
+                    """
+                    UPDATE Ingredientes
+                    SET cantidad_actual = cantidad_actual + ?
+                    WHERE id = ?
+                    """,
+                    (ingrediente['cantidad_recibida'], ingrediente['ingrediente_id'])
+                )
+                
+                # Store ingredient info for response
+                ingredientes_info.append({
+                    'ingrediente_id': ingrediente['ingrediente_id'],
+                    'ingrediente_nombre': ing_info['nombre'],
+                    'unidad_medida': ing_info['unidad_medida'],
+                    'cantidad_recibida': ingrediente['cantidad_recibida']
+                })
             
             # Commit the transaction
             db.commit()
@@ -183,15 +239,13 @@ def create_recepcion():
             # Return the created reception
             return jsonify({
                 "success": True,
-                "message": f"Recepción registrada correctamente para {ingrediente['nombre']}",
+                "message": "Recepción registrada correctamente",
                 "data": {
                     "id": recepcion_id,
-                    "ingrediente_id": data['ingrediente_id'],
-                    "ingrediente_nombre": ingrediente['nombre'],
-                    "cantidad_recibida": data['cantidad_recibida'],
                     "fecha_recepcion": fecha_recepcion,
                     "hora_recepcion": hora_recepcion,
-                    "notas": data.get('notas', '')
+                    "notas": data.get('notas', ''),
+                    "ingredientes": ingredientes_info
                 }
             })
             
@@ -218,37 +272,48 @@ def get_recepcion(id):
         db = get_db()
         cursor = db.cursor()
         
-        # Query with join to get ingredient name
+        # Query with joins to get all details
         cursor.execute(
             """
-            SELECT r.*, i.nombre as ingrediente_nombre, i.unidad_medida
+            SELECT 
+                r.id, r.fecha_recepcion, r.hora_recepcion, r.notas,
+                rd.ingrediente_id, rd.cantidad_recibida,
+                i.nombre as ingrediente_nombre, i.unidad_medida
             FROM RecepcionesCocina r
-            JOIN Ingredientes i ON r.ingrediente_id = i.id
+            JOIN RecepcionesDetalles rd ON r.id = rd.recepcion_id
+            JOIN Ingredientes i ON rd.ingrediente_id = i.id
             WHERE r.id = ?
             """,
             (id,)
         )
-        recepcion = cursor.fetchone()
+        rows = cursor.fetchall()
         
-        if not recepcion:
+        if not rows:
             return jsonify({
                 "success": False,
                 "error": f"No existe la recepción con ID {id}"
             }), 404
         
-        # Return the reception data
+        # Build the response
+        result = {
+            'id': rows[0]['id'],
+            'fecha_recepcion': rows[0]['fecha_recepcion'],
+            'hora_recepcion': rows[0]['hora_recepcion'],
+            'notas': rows[0]['notas'],
+            'ingredientes': []
+        }
+        
+        for row in rows:
+            result['ingredientes'].append({
+                'ingrediente_id': row['ingrediente_id'],
+                'ingrediente_nombre': row['ingrediente_nombre'],
+                'unidad_medida': row['unidad_medida'],
+                'cantidad_recibida': row['cantidad_recibida']
+            })
+        
         return jsonify({
             "success": True,
-            "data": {
-                'id': recepcion['id'],
-                'ingrediente_id': recepcion['ingrediente_id'],
-                'ingrediente_nombre': recepcion['ingrediente_nombre'],
-                'unidad_medida': recepcion['unidad_medida'],
-                'cantidad_recibida': recepcion['cantidad_recibida'],
-                'fecha_recepcion': recepcion['fecha_recepcion'],
-                'hora_recepcion': recepcion['hora_recepcion'],
-                'notas': recepcion['notas']
-            }
+            "data": result
         })
         
     except Exception as e:
@@ -257,7 +322,7 @@ def get_recepcion(id):
 @bp.route('/<int:id>', methods=['DELETE'])
 def delete_recepcion(id):
     """
-    Delete a specific kitchen reception by ID and adjust inventory accordingly.
+    Delete a specific kitchen reception and adjust inventory accordingly.
     
     Path parameters:
     - id: Reception ID
@@ -273,64 +338,66 @@ def delete_recepcion(id):
         cursor.execute("BEGIN TRANSACTION")
         
         try:
-            # First, get the reception details to know what to remove from inventory
+            # First, get all the reception details to know what to remove from inventory
             cursor.execute(
                 """
-                SELECT r.ingrediente_id, r.cantidad_recibida, i.nombre as ingrediente_nombre
-                FROM RecepcionesCocina r
-                JOIN Ingredientes i ON r.ingrediente_id = i.id
-                WHERE r.id = ?
+                SELECT rd.ingrediente_id, rd.cantidad_recibida, i.nombre as ingrediente_nombre
+                FROM RecepcionesDetalles rd
+                JOIN Ingredientes i ON rd.ingrediente_id = i.id
+                WHERE rd.recepcion_id = ?
                 """,
                 (id,)
             )
-            recepcion = cursor.fetchone()
+            detalles = cursor.fetchall()
             
-            if not recepcion:
+            if not detalles:
                 db.rollback()
                 return jsonify({
                     "success": False,
                     "error": f"No existe la recepción con ID {id}"
                 }), 404
             
-            # Check if removing this reception would result in negative inventory
-            cursor.execute(
-                """
-                SELECT cantidad_actual 
-                FROM Ingredientes 
-                WHERE id = ?
-                """,
-                (recepcion['ingrediente_id'],)
-            )
+            # Check if removing any ingredient would result in negative inventory
+            for detalle in detalles:
+                cursor.execute(
+                    """
+                    SELECT cantidad_actual 
+                    FROM Ingredientes 
+                    WHERE id = ?
+                    """,
+                    (detalle['ingrediente_id'],)
+                )
+                
+                ingrediente = cursor.fetchone()
+                
+                if not ingrediente:
+                    db.rollback()
+                    return jsonify({
+                        "success": False,
+                        "error": f"No existe el ingrediente con ID {detalle['ingrediente_id']}"
+                    }), 404
+                
+                nueva_cantidad = ingrediente['cantidad_actual'] - detalle['cantidad_recibida']
+                
+                if nueva_cantidad < 0:
+                    db.rollback()
+                    return jsonify({
+                        "success": False,
+                        "error": f"No es posible eliminar esta recepción porque resultaría en inventario negativo para {detalle['ingrediente_nombre']}. Cantidad actual: {ingrediente['cantidad_actual']}, Cantidad a eliminar: {detalle['cantidad_recibida']}"
+                    }), 400
             
-            ingrediente = cursor.fetchone()
+            # Update inventory for each ingredient
+            for detalle in detalles:
+                cursor.execute(
+                    """
+                    UPDATE Ingredientes
+                    SET cantidad_actual = cantidad_actual - ?
+                    WHERE id = ?
+                    """,
+                    (detalle['cantidad_recibida'], detalle['ingrediente_id'])
+                )
             
-            if not ingrediente:
-                db.rollback()
-                return jsonify({
-                    "success": False,
-                    "error": f"No existe el ingrediente con ID {recepcion['ingrediente_id']}"
-                }), 404
-            
-            nueva_cantidad = ingrediente['cantidad_actual'] - recepcion['cantidad_recibida']
-            
-            if nueva_cantidad < 0:
-                db.rollback()
-                return jsonify({
-                    "success": False,
-                    "error": f"No es posible eliminar esta recepción porque resultaría en inventario negativo para {recepcion['ingrediente_nombre']}. Cantidad actual: {ingrediente['cantidad_actual']}, Cantidad a eliminar: {recepcion['cantidad_recibida']}"
-                }), 400
-            
-            # Update ingredient inventory (subtract the received quantity)
-            cursor.execute(
-                """
-                UPDATE Ingredientes
-                SET cantidad_actual = cantidad_actual - ?
-                WHERE id = ?
-                """,
-                (recepcion['cantidad_recibida'], recepcion['ingrediente_id'])
-            )
-            
-            # Delete the reception record
+            # Delete the reception (this will cascade delete the details due to ON DELETE CASCADE)
             cursor.execute("DELETE FROM RecepcionesCocina WHERE id = ?", (id,))
             
             # Commit the transaction

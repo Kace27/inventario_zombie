@@ -359,12 +359,9 @@
         recepcionesContainer.addEventListener('click', function(e) {
             if (e.target.closest('.delete-btn')) {
                 const deleteBtn = e.target.closest('.delete-btn');
-                const itemIds = deleteBtn.getAttribute('data-item-ids').split(',');
+                const receptionId = deleteBtn.getAttribute('data-reception-id');
                 
-                receptionToDelete = {
-                    itemIds: itemIds
-                };
-                
+                receptionToDelete = receptionId;
                 confirmDeleteModal.style.display = 'flex';
             }
         });
@@ -378,7 +375,7 @@
         // Confirm delete
         confirmDeleteBtn.addEventListener('click', function() {
             if (receptionToDelete) {
-                deleteReception(receptionToDelete.itemIds);
+                deleteReception(receptionToDelete);
             }
         });
         
@@ -438,7 +435,7 @@
                 if (value) params.append(key, value);
             });
             
-            // Añadir parámetros de paginación (aumentamos el límite para agrupar mejor)
+            // Añadir parámetros de paginación
             params.append('limit', ITEMS_PER_PAGE);
             params.append('offset', (currentPage - 1) * ITEMS_PER_PAGE);
             
@@ -457,9 +454,8 @@
                         if (data.data.length === 0) {
                             emptyState.classList.remove('d-none');
                         } else {
-                            // Agrupar recepciones por fecha y hora
-                            const groupedReceptions = groupReceptionsByDateTime(data.data);
-                            renderGroupedReceptions(groupedReceptions);
+                            // Renderizar las recepciones
+                            renderReceptions(data.data);
                             
                             // Actualizar paginación
                             renderPagination();
@@ -478,50 +474,14 @@
                 });
         }
         
-        // Función para agrupar las recepciones por fecha y hora
-        function groupReceptionsByDateTime(receptions) {
-            const grouped = {};
-            
-            receptions.forEach(reception => {
-                // Creamos una clave única para cada combinación de fecha y hora
-                const key = `${reception.fecha_recepcion}-${reception.hora_recepcion}`;
-                
-                if (!grouped[key]) {
-                    grouped[key] = {
-                        fecha: reception.fecha_recepcion,
-                        hora: reception.hora_recepcion,
-                        items: [],
-                        notas: new Set() // Usamos un Set para evitar notas duplicadas
-                    };
-                }
-                
-                grouped[key].items.push(reception);
-                
-                // Añadir notas si existen y no están duplicadas
-                if (reception.notas && reception.notas.trim() !== '') {
-                    grouped[key].notas.add(reception.notas);
-                }
-            });
-            
-            // Convertir el objeto a un array ordenado por fecha y hora (más reciente primero)
-            return Object.values(grouped).sort((a, b) => {
-                const dateA = new Date(`${a.fecha}T${a.hora}`);
-                const dateB = new Date(`${b.fecha}T${b.hora}`);
-                return dateB - dateA;
-            });
-        }
-        
-        // Función para renderizar las recepciones agrupadas
-        function renderGroupedReceptions(groupedReceptions) {
-            groupedReceptions.forEach((reception, index) => {
-                const formattedDate = formatDateDisplay(reception.fecha);
-                const formattedTime = reception.hora;
+        // Función para renderizar las recepciones
+        function renderReceptions(receptions) {
+            receptions.forEach((reception, index) => {
+                const formattedDate = formatDateDisplay(reception.fecha_recepcion);
+                const formattedTime = reception.hora_recepcion;
                 
                 const receiptCard = document.createElement('div');
                 receiptCard.className = 'receipt-card';
-                
-                // Collect all item IDs in this group for deletion
-                const itemIds = reception.items.map(item => item.id).join(',');
                 
                 // Crear el encabezado de la recepción
                 const receiptHeader = document.createElement('div');
@@ -532,10 +492,10 @@
                         <div class="receipt-meta">
                             <span><i class="fas fa-calendar"></i> ${formattedDate}</span>
                             <span><i class="fas fa-clock"></i> ${formattedTime}</span>
-                            <span><i class="fas fa-box"></i> ${reception.items.length} ingrediente(s)</span>
+                            <span><i class="fas fa-box"></i> ${reception.ingredientes.length} ingrediente(s)</span>
                         </div>
                     </div>
-                    <button class="delete-btn" data-item-ids="${itemIds}">
+                    <button class="delete-btn" data-reception-id="${reception.id}">
                         <i class="fas fa-trash"></i> Eliminar
                     </button>
                 `;
@@ -559,7 +519,7 @@
                 `;
                 
                 // Añadir filas para cada ingrediente
-                reception.items.forEach(item => {
+                reception.ingredientes.forEach(item => {
                     tableHTML += `
                         <tr>
                             <td>${item.ingrediente_nombre}</td>
@@ -578,86 +538,57 @@
                 receiptItems.innerHTML = tableHTML;
                 
                 // Añadir las notas si existen
-                const notasArray = Array.from(reception.notas);
-                
-                let notesSection = '';
-                if (notasArray.length > 0) {
-                    notesSection = `
-                        <div class="receipt-notes">
-                            <strong><i class="fas fa-sticky-note"></i> Notas:</strong>
-                            <p class="mb-0 mt-1">${notasArray.join('<br>')}</p>
-                        </div>
+                if (reception.notas && reception.notas.trim() !== '') {
+                    const notesSection = document.createElement('div');
+                    notesSection.className = 'receipt-notes';
+                    notesSection.innerHTML = `
+                        <strong><i class="fas fa-sticky-note"></i> Notas:</strong>
+                        <p class="mb-0 mt-1">${reception.notas}</p>
                     `;
+                    receiptCard.appendChild(notesSection);
                 }
                 
                 // Armar la tarjeta completa
                 receiptCard.appendChild(receiptHeader);
                 receiptCard.appendChild(receiptItems);
                 
-                if (notesSection) {
-                    const notesElement = document.createElement('div');
-                    notesElement.innerHTML = notesSection;
-                    receiptCard.appendChild(notesElement.firstElementChild);
-                }
-                
                 recepcionesContainer.appendChild(receiptCard);
             });
         }
         
         // Function to delete a reception
-        function deleteReception(receptionIds) {
+        function deleteReception(receptionId) {
             // Show loading state
             confirmDeleteBtn.textContent = 'Eliminando...';
             confirmDeleteBtn.disabled = true;
             
-            // Create a counter for successful deletions
-            let successCount = 0;
-            let totalItems = receptionIds.length;
-            let errors = [];
-            
-            // Process each reception item
-            receptionIds.forEach(id => {
-                fetch(`/api/recepciones/${id}`, {
-                    method: 'DELETE'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        successCount++;
-                    } else {
-                        errors.push(data.error || 'Error desconocido');
-                    }
-                })
-                .catch(error => {
-                    errors.push(error.message || 'Error de red');
-                })
-                .finally(() => {
-                    // Check if all requests have completed
-                    if (successCount + errors.length === totalItems) {
-                        // Hide modal
-                        confirmDeleteModal.style.display = 'none';
-                        confirmDeleteBtn.textContent = 'Eliminar';
-                        confirmDeleteBtn.disabled = false;
-                        receptionToDelete = null;
-                        
-                        // Show result toast
-                        if (successCount === totalItems) {
-                            showToast('Recepción eliminada correctamente', 'success');
-                        } else if (successCount > 0) {
-                            showToast(`Se eliminaron ${successCount} de ${totalItems} items. Algunos errores ocurrieron.`, 'error');
-                        } else {
-                            showToast('Error al eliminar la recepción: ' + errors[0], 'error');
-                        }
-                        
-                        // Reload data
-                        loadRecepciones();
-                    }
-                });
+            fetch(`/api/recepciones/${receptionId}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('success', 'Recepción eliminada correctamente');
+                    loadRecepciones(); // Recargar la lista
+                } else {
+                    showToast('error', data.error || 'Error al eliminar la recepción');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('error', 'Error al procesar la solicitud');
+            })
+            .finally(() => {
+                // Reset modal state
+                confirmDeleteBtn.textContent = 'Eliminar';
+                confirmDeleteBtn.disabled = false;
+                confirmDeleteModal.style.display = 'none';
+                receptionToDelete = null;
             });
         }
         
         // Function to show toast notification
-        function showToast(message, type = 'success') {
+        function showToast(type, message) {
             toast.textContent = message;
             toast.className = 'toast ' + type;
             toast.style.display = 'block';
