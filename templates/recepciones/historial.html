@@ -3,141 +3,202 @@
 {% block title %}Historial de Recepciones - Inventario Zombie{% endblock %}
 
 {% block head %}
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <style>
-    .filters-container {
-        background-color: black;
-        border-radius: 0.5rem;
-        padding: 1.25rem;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    :root {
+        --primary-color: #4CAF50;
+        --primary-light: rgba(76, 175, 80, 0.1);
+        --primary-dark: #2E7D32;
+        --secondary-color: #333;
+        --surface-color: #fff;
+        --background-color: #f5f5f5;
+        --border-color: #e0e0e0;
+        --error-color: #F44336;
+        --text-primary: #212121;
+        --text-secondary: #757575;
+        --radius-small: 8px;
+        --radius-medium: 12px;
+        --radius-large: 16px;
+        --shadow-small: 0 1px 3px rgba(0,0,0,0.12);
+        --shadow-medium: 0 4px 6px rgba(0,0,0,0.1);
+        --spacing-xs: 4px;
+        --spacing-sm: 8px;
+        --spacing-md: 16px;
+        --spacing-lg: 24px;
     }
-    
-    .date-filters {
-        display: flex;
-        gap: 1rem;
-        margin-bottom: 1rem;
-    }
-    
-    .date-filters .form-group {
-        flex: 1;
-    }
-    
-    .filter-buttons {
-        display: flex;
-        gap: 0.5rem;
-    }
-    
-    .table-responsive {
-        border-radius: 0.5rem;
-        overflow: hidden;
-        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-    }
-    
-    .table th {
-        position: sticky;
-        top: 0;
-        z-index: 1;
-    }
-    
-    .card-header {
-        background-color: #4CAF50;
-        color: white;
-        font-weight: 500;
-    }
-    
-    .receipt-card {
-        margin-bottom: 1.5rem;
-        border: 1px solid #e0e0e0;
-        border-radius: 0.5rem;
-        overflow: hidden;
-    }
-    
-    .receipt-header {
-        background-color: #f8f9fa;
-        padding: 1rem;
-        border-bottom: 1px solid #e0e0e0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    
-    .receipt-header h5 {
-        margin-bottom: 0;
-        font-weight: 600;
-    }
-    
-    .receipt-meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1rem;
-        font-size: 0.9rem;
-        color: #666;
-    }
-    
-    .receipt-meta span {
-        display: flex;
-        align-items: center;
-    }
-    
-    .receipt-meta i {
-        margin-right: 0.3rem;
-    }
-    
-    .receipt-items {
+
+    /* Reset and base styles */
+    * {
+        box-sizing: border-box;
+        margin: 0;
         padding: 0;
     }
     
-    .receipt-table {
-        margin-bottom: 0;
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background-color: var(--background-color);
+        color: var(--text-primary);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        overflow-x: hidden;
     }
     
-    .receipt-notes {
-        padding: 0.75rem 1rem;
-        background-color: #fffde7;
+    .container {
+        width: 100%;
+        max-width: 480px;
+        margin: 0 auto;
+        padding: var(--spacing-sm);
+        margin-top: 20px;
+    }
+    
+    h1 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--secondary-color);
+        margin: var(--spacing-md) 0;
+        text-align: center;
+    }
+
+    /* Search bar */
+    .search-wrapper {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background-color: var(--background-color);
+        padding: var(--spacing-sm) 0;
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .search-container {
+        position: relative;
+        width: 100%;
+    }
+    
+    .search-input {
+        width: 100%;
+        padding: 14px 16px;
+        border: none;
+        border-radius: var(--radius-medium);
+        font-size: 16px;
+        background-color: var(--surface-color);
+        color: var(--text-primary);
+        box-shadow: var(--shadow-small);
+    }
+    
+    .search-input:focus {
+        outline: none;
+        box-shadow: var(--shadow-medium);
+    }
+    
+    .search-icon {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-secondary);
+    }
+
+    /* Reception cards */
+    .reception-card {
+        background-color: var(--surface-color);
+        border-radius: var(--radius-medium);
+        margin-bottom: var(--spacing-md);
+        overflow: hidden;
+        box-shadow: var(--shadow-small);
+    }
+    
+    .reception-header {
+        padding: var(--spacing-md);
+        background-color: var(--surface-color);
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .reception-date {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: var(--spacing-xs);
+    }
+    
+    .reception-time {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+    
+    .reception-items {
+        padding: var(--spacing-md);
+    }
+    
+    .reception-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--spacing-sm) 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .reception-item:last-child {
+        border-bottom: none;
+    }
+    
+    .item-name {
+        font-size: 1rem;
+        color: var(--text-primary);
+    }
+    
+    .item-quantity {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+    
+    .reception-notes {
+        padding: var(--spacing-md);
+        background-color: var(--primary-light);
         font-style: italic;
-        border-top: 1px solid #e0e0e0;
+        color: var(--text-primary);
+        border-top: 1px solid var(--border-color);
     }
-    
-    .pagination {
-        margin-top: 1rem;
-        justify-content: center;
-    }
-    
+
+    /* Loading and empty states */
     .spinner-border {
         display: none;
-        margin: 2rem auto;
+        margin: var(--spacing-lg) auto;
     }
     
     .empty-state {
         text-align: center;
-        padding: 3rem 1rem;
+        padding: var(--spacing-lg);
+        color: var(--text-secondary);
     }
     
     .empty-state i {
         font-size: 3rem;
-        color: #ccc;
-        margin-bottom: 1rem;
+        margin-bottom: var(--spacing-md);
     }
-    
-    /* Delete functionality styles */
-    .delete-btn {
-        background-color: #dc3545;
+
+    /* Toast notifications */
+    .toast {
+        position: fixed;
+        bottom: var(--spacing-lg);
+        right: var(--spacing-lg);
+        background-color: var(--secondary-color);
         color: white;
-        border: none;
-        border-radius: 0.25rem;
-        padding: 0.375rem 0.75rem;
-        font-size: 0.875rem;
-        cursor: pointer;
-        transition: background-color 0.2s;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
+        padding: var(--spacing-md);
+        border-radius: var(--radius-medium);
+        box-shadow: var(--shadow-medium);
+        z-index: 1000;
+        display: none;
     }
     
-    .delete-btn:hover {
-        background-color: #bd2130;
+    .toast.success {
+        background-color: var(--primary-color);
     }
     
+    .toast.error {
+        background-color: var(--error-color);
+    }
+
+    /* Delete confirmation modal */
     .confirm-modal {
         position: fixed;
         top: 0;
@@ -145,542 +206,227 @@
         width: 100%;
         height: 100%;
         background-color: rgba(0, 0, 0, 0.5);
-        display: flex;
+        display: none;
         align-items: center;
         justify-content: center;
-        z-index: 1050;
+        z-index: 1000;
     }
     
     .confirm-modal-content {
-        background-color: white;
-        border-radius: 0.5rem;
-        width: 100%;
+        background-color: var(--surface-color);
+        border-radius: var(--radius-medium);
+        padding: var(--spacing-lg);
+        width: 90%;
         max-width: 400px;
-        padding: 1.5rem;
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
     }
     
     .confirm-modal-title {
         font-size: 1.25rem;
         font-weight: 600;
-        margin-bottom: 1rem;
-    }
-    
-    .confirm-modal-text {
-        margin-bottom: 1.5rem;
+        margin-bottom: var(--spacing-md);
+        color: var(--text-primary);
     }
     
     .confirm-modal-actions {
         display: flex;
         justify-content: flex-end;
-        gap: 0.5rem;
+        gap: var(--spacing-sm);
+        margin-top: var(--spacing-lg);
     }
     
-    .confirm-btn-cancel {
-        padding: 0.375rem 0.75rem;
-        border: 1px solid #ced4da;
-        background-color: white;
-        border-radius: 0.25rem;
-        cursor: pointer;
-    }
-    
-    .confirm-btn-delete {
-        padding: 0.375rem 0.75rem;
+    .btn {
+        padding: var(--spacing-sm) var(--spacing-md);
+        border-radius: var(--radius-small);
         border: none;
-        background-color: #dc3545;
-        color: white;
-        border-radius: 0.25rem;
+        font-size: 1rem;
         cursor: pointer;
     }
     
-    .toast {
-        position: fixed;
-        bottom: 1rem;
-        right: 1rem;
-        background-color: #333;
+    .btn-cancel {
+        background-color: var(--background-color);
+        color: var(--text-primary);
+    }
+    
+    .btn-delete {
+        background-color: var(--error-color);
         color: white;
-        padding: 0.75rem 1.25rem;
-        border-radius: 0.25rem;
-        box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.1);
-        z-index: 1060;
-        display: none;
-        max-width: 350px;
-    }
-    
-    .toast.success {
-        background-color: #28a745;
-    }
-    
-    .toast.error {
-        background-color: #dc3545;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="row mb-4">
-        <div class="col">
-            <h1 class="h3 mb-0">Historial de Recepciones</h1>
-            <p class="text-muted">Consulta todas las recepciones de ingredientes registradas en el sistema</p>
+<div class="container">
+    <h1>Historial de Recepciones</h1>
+    
+    <!-- Search bar -->
+    <div class="search-wrapper">
+        <div class="search-container">
+            <input type="text" id="search-input" class="search-input" placeholder="Buscar ingrediente...">
+            <i class="fas fa-search search-icon"></i>
         </div>
     </div>
     
-    <div class="card mb-4">
-        <div class="card-header py-3">
-            <h5 class="mb-0">Filtros</h5>
-        </div>
-        <div class="card-body">
-            <form id="filtros-form">
-                <div class="row">
-                    <div class="col-md-6 col-lg-3 mb-3">
-                        <label for="fecha-inicio" class="form-label">Fecha inicio</label>
-                        <input type="date" class="form-control" id="fecha-inicio" name="fecha_inicio">
-                    </div>
-                    <div class="col-md-6 col-lg-3 mb-3">
-                        <label for="fecha-fin" class="form-label">Fecha fin</label>
-                        <input type="date" class="form-control" id="fecha-fin" name="fecha_fin">
-                    </div>
-                    <div class="col-md-6 col-lg-3 mb-3">
-                        <label for="ingrediente" class="form-label">Ingrediente</label>
-                        <select class="form-select" id="ingrediente" name="ingrediente_id">
-                            <option value="">Todos los ingredientes</option>
-                            <!-- Opciones se cargarán dinámicamente -->
-                        </select>
-                    </div>
-                    <div class="col-md-6 col-lg-3 mb-3 d-flex align-items-end">
-                        <div class="d-grid gap-2 d-md-flex w-100">
-                            <button type="submit" class="btn btn-primary flex-grow-1">
-                                <i class="fas fa-search me-1"></i> Filtrar
-                            </button>
-                            <button type="button" id="reset-filters" class="btn btn-outline-secondary">
-                                <i class="fas fa-undo me-1"></i> Limpiar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </form>
-        </div>
+    <!-- Receptions list -->
+    <div id="recepciones-container">
+        <!-- Reception cards will be added here dynamically -->
     </div>
     
-    <div class="card">
-        <div class="card-header py-3 d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Recepciones registradas</h5>
-            <span id="total-registros" class="badge bg-secondary"></span>
-        </div>
-        <div class="card-body">
-            <div id="recepciones-container">
-                <!-- Las recepciones agrupadas se cargarán aquí -->
-            </div>
-            
-            <div id="spinner" class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Cargando...</span>
-            </div>
-            
-            <div id="empty-state" class="empty-state d-none">
-                <i class="fas fa-inbox"></i>
-                <h5>No hay recepciones registradas</h5>
-                <p class="text-muted">No se encontraron recepciones con los filtros aplicados</p>
-            </div>
-        </div>
-        <div class="card-footer">
-            <nav>
-                <ul id="pagination" class="pagination justify-content-center">
-                    <!-- Se llenará dinámicamente -->
-                </ul>
-            </nav>
-        </div>
+    <!-- Loading spinner -->
+    <div id="spinner" class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Cargando...</span>
     </div>
     
-    <!-- Confirm Delete Modal -->
-    <div id="confirmDeleteModal" class="confirm-modal" style="display: none;">
-        <div class="confirm-modal-content">
-            <div class="confirm-modal-title">Confirmar eliminación</div>
-            <div class="confirm-modal-text">
-                ¿Estás seguro de que deseas eliminar esta recepción? Esta acción no se puede deshacer y reducirá el inventario correspondiente.
-            </div>
-            <div class="confirm-modal-actions">
-                <button id="cancelDeleteBtn" class="confirm-btn-cancel">Cancelar</button>
-                <button id="confirmDeleteBtn" class="confirm-btn-delete">Eliminar</button>
-            </div>
-        </div>
+    <!-- Empty state -->
+    <div id="empty-state" class="empty-state d-none">
+        <i class="fas fa-inbox"></i>
+        <p>No se encontraron recepciones</p>
     </div>
-    
-    <!-- Toast notification -->
-    <div id="toast" class="toast"></div>
 </div>
+
+<!-- Delete confirmation modal -->
+<div id="confirmDeleteModal" class="confirm-modal">
+    <div class="confirm-modal-content">
+        <h3 class="confirm-modal-title">Confirmar eliminación</h3>
+        <p>¿Estás seguro de que deseas eliminar esta recepción?</p>
+        <div class="confirm-modal-actions">
+            <button id="cancelDeleteBtn" class="btn btn-cancel">Cancelar</button>
+            <button id="confirmDeleteBtn" class="btn btn-delete">Eliminar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast notification -->
+<div id="toast" class="toast"></div>
 {% endblock %}
 
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Variables de paginación
-        const ITEMS_PER_PAGE = 20; // Aumentamos la cantidad para mostrar más recepciones por página
-        let currentPage = 1;
-        let totalItems = 0;
-        
-        // Elementos del DOM
-        const filtrosForm = document.getElementById('filtros-form');
-        const resetFiltersBtn = document.getElementById('reset-filters');
-        const ingredienteSelect = document.getElementById('ingrediente');
+        // Variables
+        const searchInput = document.getElementById('search-input');
         const recepcionesContainer = document.getElementById('recepciones-container');
         const spinner = document.getElementById('spinner');
         const emptyState = document.getElementById('empty-state');
-        const totalRegistros = document.getElementById('total-registros');
-        const pagination = document.getElementById('pagination');
         const confirmDeleteModal = document.getElementById('confirmDeleteModal');
         const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
         const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
         const toast = document.getElementById('toast');
-        
-        // Variable para almacenar la recepción que se va a eliminar
         let receptionToDelete = null;
         
-        // Cargar los filtros al iniciar la página
-        loadFilters();
-        
-        // Cargar los datos iniciales
+        // Load initial data
         loadRecepciones();
         
         // Event listeners
-        filtrosForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            currentPage = 1;
+        searchInput.addEventListener('input', debounce(() => {
             loadRecepciones();
-        });
+        }, 300));
         
-        resetFiltersBtn.addEventListener('click', function() {
-            filtrosForm.reset();
-            currentPage = 1;
-            loadRecepciones();
-        });
-        
-        // Event delegation for delete buttons
-        recepcionesContainer.addEventListener('click', function(e) {
-            if (e.target.closest('.delete-btn')) {
-                const deleteBtn = e.target.closest('.delete-btn');
-                const receptionId = deleteBtn.getAttribute('data-reception-id');
-                
-                receptionToDelete = receptionId;
-                confirmDeleteModal.style.display = 'flex';
-            }
-        });
-        
-        // Cancel delete
-        cancelDeleteBtn.addEventListener('click', function() {
-            confirmDeleteModal.style.display = 'none';
-            receptionToDelete = null;
-        });
-        
-        // Confirm delete
-        confirmDeleteBtn.addEventListener('click', function() {
-            if (receptionToDelete) {
-                deleteReception(receptionToDelete);
-            }
-        });
-        
-        // Close modal when clicking outside
-        confirmDeleteModal.addEventListener('click', function(e) {
-            if (e.target === confirmDeleteModal) {
-                confirmDeleteModal.style.display = 'none';
-                receptionToDelete = null;
-            }
-        });
-        
-        // Función para cargar los filtros
-        function loadFilters() {
-            // Cargar ingredientes
-            fetch('/api/ingredientes')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Ordenar ingredientes por nombre
-                        const ingredientes = data.data.sort((a, b) => a.nombre.localeCompare(b.nombre));
-                        
-                        // Limpiar opciones actuales
-                        ingredienteSelect.innerHTML = '<option value="">Todos los ingredientes</option>';
-                        
-                        // Agregar opciones
-                        ingredientes.forEach(ingrediente => {
-                            const option = document.createElement('option');
-                            option.value = ingrediente.id;
-                            option.textContent = ingrediente.nombre;
-                            ingredienteSelect.appendChild(option);
-                        });
-                    }
-                })
-                .catch(error => console.error('Error al cargar ingredientes:', error));
-                
-            // Establecer fechas predeterminadas (último mes)
-            const hoy = new Date();
-            const unMesAtras = new Date();
-            unMesAtras.setMonth(unMesAtras.getMonth() - 1);
-            
-            document.getElementById('fecha-fin').value = formatDate(hoy);
-            document.getElementById('fecha-inicio').value = formatDate(unMesAtras);
-        }
-        
-        // Función para cargar las recepciones
+        // Function to load receptions
         function loadRecepciones() {
-            // Mostrar spinner
+            // Show loading state
             spinner.style.display = 'block';
             emptyState.classList.add('d-none');
             recepcionesContainer.innerHTML = '';
             
-            // Construir URL con parámetros de filtro
-            const formData = new FormData(filtrosForm);
+            // Build query parameters
             const params = new URLSearchParams();
             
-            formData.forEach((value, key) => {
-                if (value) params.append(key, value);
-            });
+            // Add search filter if there's a search term
+            if (searchInput.value.trim()) {
+                params.append('ingrediente_nombre', searchInput.value.trim());
+            }
             
-            // Añadir parámetros de paginación
-            params.append('limit', ITEMS_PER_PAGE);
-            params.append('offset', (currentPage - 1) * ITEMS_PER_PAGE);
-            
-            // Realizar la petición
+            // Fetch receptions
             fetch(`/api/recepciones?${params.toString()}`)
                 .then(response => response.json())
                 .then(data => {
-                    // Ocultar spinner
+                    // Hide loading spinner
                     spinner.style.display = 'none';
                     
                     if (data.success) {
-                        totalItems = data.total;
-                        totalRegistros.textContent = `Total: ${totalItems}`;
-                        
-                        // Mostrar datos o estado vacío
                         if (data.data.length === 0) {
                             emptyState.classList.remove('d-none');
                         } else {
-                            // Renderizar las recepciones
+                            // Render receptions
                             renderReceptions(data.data);
-                            
-                            // Actualizar paginación
-                            renderPagination();
                         }
                     } else {
                         console.error('Error al cargar recepciones:', data.error);
-                        emptyState.classList.remove('d-none');
-                        document.querySelector('#empty-state p').textContent = 'Ocurrió un error al cargar los datos';
+                        showToast('error', 'Error al cargar las recepciones');
                     }
                 })
                 .catch(error => {
-                    console.error('Error de red:', error);
+                    console.error('Error:', error);
                     spinner.style.display = 'none';
-                    emptyState.classList.remove('d-none');
-                    document.querySelector('#empty-state p').textContent = 'Error de conexión';
+                    showToast('error', 'Error de conexión');
                 });
         }
         
-        // Función para renderizar las recepciones
+        // Function to render receptions
         function renderReceptions(receptions) {
-            receptions.forEach((reception, index) => {
+            receptions.forEach(reception => {
+                const card = document.createElement('div');
+                card.className = 'reception-card';
+                
+                // Format date for display
                 const formattedDate = formatDateDisplay(reception.fecha_recepcion);
-                const formattedTime = reception.hora_recepcion;
                 
-                const receiptCard = document.createElement('div');
-                receiptCard.className = 'receipt-card';
-                
-                // Crear el encabezado de la recepción
-                const receiptHeader = document.createElement('div');
-                receiptHeader.className = 'receipt-header';
-                receiptHeader.innerHTML = `
-                    <div>
-                        <h5>Recepción #${index + 1 + ((currentPage - 1) * ITEMS_PER_PAGE)}</h5>
-                        <div class="receipt-meta">
-                            <span><i class="fas fa-calendar"></i> ${formattedDate}</span>
-                            <span><i class="fas fa-clock"></i> ${formattedTime}</span>
-                            <span><i class="fas fa-box"></i> ${reception.ingredientes.length} ingrediente(s)</span>
+                // Create card content
+                card.innerHTML = `
+                    <div class="reception-header">
+                        <div class="reception-date">${formattedDate}</div>
+                        <div class="reception-time">${reception.hora_recepcion}</div>
+                    </div>
+                    <div class="reception-items">
+                        ${reception.ingredientes.map(item => `
+                            <div class="reception-item">
+                                <span class="item-name">${item.ingrediente_nombre}</span>
+                                <span class="item-quantity">${item.cantidad_recibida} ${item.unidad_medida}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    ${reception.notas ? `
+                        <div class="reception-notes">
+                            <i class="fas fa-sticky-note"></i> ${reception.notas}
                         </div>
-                    </div>
-                    <button class="delete-btn" data-reception-id="${reception.id}">
-                        <i class="fas fa-trash"></i> Eliminar
-                    </button>
+                    ` : ''}
                 `;
                 
-                // Crear la tabla de items
-                const receiptItems = document.createElement('div');
-                receiptItems.className = 'receipt-items';
-                
-                // Construir la tabla
-                let tableHTML = `
-                    <div class="table-responsive">
-                        <table class="table table-striped receipt-table">
-                            <thead>
-                                <tr>
-                                    <th>Ingrediente</th>
-                                    <th>Cantidad</th>
-                                    <th>Unidad</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                `;
-                
-                // Añadir filas para cada ingrediente
-                reception.ingredientes.forEach(item => {
-                    tableHTML += `
-                        <tr>
-                            <td>${item.ingrediente_nombre}</td>
-                            <td>${item.cantidad_recibida}</td>
-                            <td>${item.unidad_medida}</td>
-                        </tr>
-                    `;
-                });
-                
-                tableHTML += `
-                            </tbody>
-                        </table>
-                    </div>
-                `;
-                
-                receiptItems.innerHTML = tableHTML;
-                
-                // Añadir las notas si existen
-                if (reception.notas && reception.notas.trim() !== '') {
-                    const notesSection = document.createElement('div');
-                    notesSection.className = 'receipt-notes';
-                    notesSection.innerHTML = `
-                        <strong><i class="fas fa-sticky-note"></i> Notas:</strong>
-                        <p class="mb-0 mt-1">${reception.notas}</p>
-                    `;
-                    receiptCard.appendChild(notesSection);
-                }
-                
-                // Armar la tarjeta completa
-                receiptCard.appendChild(receiptHeader);
-                receiptCard.appendChild(receiptItems);
-                
-                recepcionesContainer.appendChild(receiptCard);
+                recepcionesContainer.appendChild(card);
             });
         }
         
-        // Function to delete a reception
-        function deleteReception(receptionId) {
-            // Show loading state
-            confirmDeleteBtn.textContent = 'Eliminando...';
-            confirmDeleteBtn.disabled = true;
-            
-            fetch(`/api/recepciones/${receptionId}`, {
-                method: 'DELETE'
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showToast('success', 'Recepción eliminada correctamente');
-                    loadRecepciones(); // Recargar la lista
-                } else {
-                    showToast('error', data.error || 'Error al eliminar la recepción');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showToast('error', 'Error al procesar la solicitud');
-            })
-            .finally(() => {
-                // Reset modal state
-                confirmDeleteBtn.textContent = 'Eliminar';
-                confirmDeleteBtn.disabled = false;
-                confirmDeleteModal.style.display = 'none';
-                receptionToDelete = null;
+        // Utility functions
+        function formatDateDisplay(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('es-MX', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
             });
         }
         
-        // Function to show toast notification
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+        
         function showToast(type, message) {
             toast.textContent = message;
-            toast.className = 'toast ' + type;
+            toast.className = `toast ${type}`;
             toast.style.display = 'block';
             
             setTimeout(() => {
                 toast.style.display = 'none';
             }, 3000);
-        }
-        
-        // Función para renderizar la paginación
-        function renderPagination() {
-            pagination.innerHTML = '';
-            
-            if (totalItems <= ITEMS_PER_PAGE) return;
-            
-            const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
-            
-            // Botón anterior
-            const prevLi = document.createElement('li');
-            prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
-            const prevLink = document.createElement('a');
-            prevLink.className = 'page-link';
-            prevLink.href = '#';
-            prevLink.innerHTML = '&laquo;';
-            prevLink.addEventListener('click', function(e) {
-                e.preventDefault();
-                if (currentPage > 1) {
-                    currentPage--;
-                    loadRecepciones();
-                }
-            });
-            prevLi.appendChild(prevLink);
-            pagination.appendChild(prevLi);
-            
-            // Páginas
-            let startPage = Math.max(1, currentPage - 2);
-            let endPage = Math.min(totalPages, startPage + 4);
-            
-            if (endPage - startPage < 4 && startPage > 1) {
-                startPage = Math.max(1, endPage - 4);
-            }
-            
-            for (let i = startPage; i <= endPage; i++) {
-                const pageLi = document.createElement('li');
-                pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
-                const pageLink = document.createElement('a');
-                pageLink.className = 'page-link';
-                pageLink.href = '#';
-                pageLink.textContent = i;
-                pageLink.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    currentPage = i;
-                    loadRecepciones();
-                });
-                pageLi.appendChild(pageLink);
-                pagination.appendChild(pageLi);
-            }
-            
-            // Botón siguiente
-            const nextLi = document.createElement('li');
-            nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
-            const nextLink = document.createElement('a');
-            nextLink.className = 'page-link';
-            nextLink.href = '#';
-            nextLink.innerHTML = '&raquo;';
-            nextLink.addEventListener('click', function(e) {
-                e.preventDefault();
-                if (currentPage < totalPages) {
-                    currentPage++;
-                    loadRecepciones();
-                }
-            });
-            nextLi.appendChild(nextLink);
-            pagination.appendChild(nextLi);
-        }
-        
-        // Función para formatear fecha YYYY-MM-DD
-        function formatDate(date) {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
-        
-        // Función para mostrar fecha en formato más amigable
-        function formatDateDisplay(dateStr) {
-            // Convertir YYYY-MM-DD a DD/MM/YYYY
-            const parts = dateStr.split('-');
-            if (parts.length === 3) {
-                return `${parts[2]}/${parts[1]}/${parts[0]}`;
-            }
-            return dateStr;
         }
     });
 </script>
