@@ -111,6 +111,19 @@
         padding: var(--spacing-md);
         background-color: var(--surface-color);
         border-bottom: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .reception-header:hover {
+        background-color: var(--primary-light);
+    }
+    
+    .reception-header-content {
+        flex-grow: 1;
     }
     
     .reception-date {
@@ -123,6 +136,50 @@
     .reception-time {
         font-size: 0.875rem;
         color: var(--text-secondary);
+    }
+
+    .reception-toggle {
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: var(--spacing-md);
+        transition: transform 0.3s ease;
+        color: var(--text-secondary);
+    }
+
+    .reception-toggle.collapsed {
+        transform: rotate(-180deg);
+    }
+
+    .delete-btn {
+        background-color: var(--error-color);
+        color: white;
+        border: none;
+        border-radius: var(--radius-small);
+        padding: var(--spacing-xs) var(--spacing-sm);
+        font-size: 0.875rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-xs);
+        margin-left: var(--spacing-md);
+        transition: background-color 0.2s ease;
+    }
+
+    .delete-btn:hover {
+        background-color: #d32f2f;
+    }
+    
+    .reception-content {
+        max-height: 1000px;
+        overflow: hidden;
+        transition: max-height 0.3s ease-in-out;
+    }
+    
+    .reception-content.collapsed {
+        max-height: 0;
     }
     
     .reception-items {
@@ -320,6 +377,47 @@
         searchInput.addEventListener('input', debounce(() => {
             loadRecepciones();
         }, 300));
+
+        // Event delegation for delete buttons and collapsible headers
+        recepcionesContainer.addEventListener('click', function(e) {
+            const deleteBtn = e.target.closest('.delete-btn');
+            const header = e.target.closest('.reception-header');
+
+            if (deleteBtn) {
+                e.stopPropagation(); // Prevent header click when clicking delete
+                const receptionId = deleteBtn.getAttribute('data-reception-id');
+                receptionToDelete = receptionId;
+                confirmDeleteModal.style.display = 'flex';
+            } else if (header) {
+                const card = header.closest('.reception-card');
+                const content = card.querySelector('.reception-content');
+                const toggle = card.querySelector('.reception-toggle');
+                
+                content.classList.toggle('collapsed');
+                toggle.classList.toggle('collapsed');
+            }
+        });
+
+        // Cancel delete
+        cancelDeleteBtn.addEventListener('click', function() {
+            confirmDeleteModal.style.display = 'none';
+            receptionToDelete = null;
+        });
+
+        // Confirm delete
+        confirmDeleteBtn.addEventListener('click', function() {
+            if (receptionToDelete) {
+                deleteReception(receptionToDelete);
+            }
+        });
+
+        // Close modal when clicking outside
+        confirmDeleteModal.addEventListener('click', function(e) {
+            if (e.target === confirmDeleteModal) {
+                confirmDeleteModal.style.display = 'none';
+                receptionToDelete = null;
+            }
+        });
         
         // Function to load receptions
         function loadRecepciones() {
@@ -374,22 +472,33 @@
                 // Create card content
                 card.innerHTML = `
                     <div class="reception-header">
-                        <div class="reception-date">${formattedDate}</div>
-                        <div class="reception-time">${reception.hora_recepcion}</div>
-                    </div>
-                    <div class="reception-items">
-                        ${reception.ingredientes.map(item => `
-                            <div class="reception-item">
-                                <span class="item-name">${item.ingrediente_nombre}</span>
-                                <span class="item-quantity">${item.cantidad_recibida} ${item.unidad_medida}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                    ${reception.notas ? `
-                        <div class="reception-notes">
-                            <i class="fas fa-sticky-note"></i> ${reception.notas}
+                        <div class="reception-header-content">
+                            <div class="reception-date">${formattedDate}</div>
+                            <div class="reception-time">${reception.hora_recepcion}</div>
                         </div>
-                    ` : ''}
+                        <button class="delete-btn" data-reception-id="${reception.id}">
+                            <i class="fas fa-trash"></i>
+                            Eliminar
+                        </button>
+                        <div class="reception-toggle">
+                            <i class="fas fa-chevron-up"></i>
+                        </div>
+                    </div>
+                    <div class="reception-content">
+                        <div class="reception-items">
+                            ${reception.ingredientes.map(item => `
+                                <div class="reception-item">
+                                    <span class="item-name">${item.ingrediente_nombre}</span>
+                                    <span class="item-quantity">${item.cantidad_recibida} ${item.unidad_medida}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        ${reception.notas ? `
+                            <div class="reception-notes">
+                                <i class="fas fa-sticky-note"></i> ${reception.notas}
+                            </div>
+                        ` : ''}
+                    </div>
                 `;
                 
                 recepcionesContainer.appendChild(card);
@@ -427,6 +536,37 @@
             setTimeout(() => {
                 toast.style.display = 'none';
             }, 3000);
+        }
+
+        // Function to delete a reception
+        function deleteReception(receptionId) {
+            // Show loading state
+            confirmDeleteBtn.textContent = 'Eliminando...';
+            confirmDeleteBtn.disabled = true;
+            
+            fetch(`/api/recepciones/${receptionId}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('success', 'Recepción eliminada correctamente');
+                    loadRecepciones(); // Reload the list
+                } else {
+                    showToast('error', data.error || 'Error al eliminar la recepción');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('error', 'Error al procesar la solicitud');
+            })
+            .finally(() => {
+                // Reset modal state
+                confirmDeleteBtn.textContent = 'Eliminar';
+                confirmDeleteBtn.disabled = false;
+                confirmDeleteModal.style.display = 'none';
+                receptionToDelete = null;
+            });
         }
     });
 </script>
