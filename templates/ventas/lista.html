@@ -3,7 +3,104 @@
 {% block title %}Visualización de Ventas - Inventario Zombie{% endblock %}
 
 {% block head %}
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <style>
+    :root {
+        --primary-color: #4CAF50;
+        --primary-light: rgba(76, 175, 80, 0.1);
+        --primary-dark: #2E7D32;
+        --secondary-color: #333;
+        --surface-color: #fff;
+        --background-color: #f5f5f5;
+        --border-color: #e0e0e0;
+        --error-color: #F44336;
+        --warning-color: #f0ad4e;
+        --text-primary: #212121;
+        --text-secondary: #757575;
+        --radius-small: 8px;
+        --radius-medium: 12px;
+        --radius-large: 16px;
+        --shadow-small: 0 1px 3px rgba(0,0,0,0.12);
+        --shadow-medium: 0 4px 6px rgba(0,0,0,0.1);
+        --spacing-xs: 4px;
+        --spacing-sm: 8px;
+        --spacing-md: 16px;
+        --spacing-lg: 24px;
+    }
+
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+    
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background-color: var(--background-color);
+        color: var(--text-primary);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        overflow-x: hidden;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 480px;
+        margin: 0 auto;
+        padding: var(--spacing-sm);
+        margin-top: 20px;
+    }
+
+    .content-container {
+        width: 100%;
+        max-width: 480px;
+        margin: 0 auto;
+        padding: var(--spacing-sm);
+    }
+
+    .content-header {
+        margin-bottom: var(--spacing-lg);
+    }
+
+    h1 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--secondary-color);
+        margin: var(--spacing-md) 0;
+        text-align: center;
+    }
+
+    .action-links {
+        display: flex;
+        gap: var(--spacing-sm);
+        justify-content: center;
+        margin: var(--spacing-md) 0;
+    }
+
+    .action-links a {
+        display: inline-flex;
+        align-items: center;
+        padding: var(--spacing-sm) var(--spacing-md);
+        text-decoration: none;
+        border-radius: var(--radius-medium);
+        color: white;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+
+    .action-links a.import-receipts-link {
+        background-color: var(--warning-color);
+    }
+
+    .action-links a:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+    }
+
+    .action-links a i {
+        margin-right: var(--spacing-sm);
+    }
+
     .detail-modal {
         display: none;
         position: fixed;
@@ -13,171 +110,201 @@
         height: 100%;
         background-color: rgba(0, 0, 0, 0.5);
         z-index: 1000;
+        backdrop-filter: blur(4px);
     }
+
     .detail-modal-content {
         position: relative;
-        background-color: white;
-        margin: 50px auto;
-        padding: 20px;
-        max-width: 800px;
-        border-radius: 5px;
-        box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+        background-color: var(--surface-color);
+        margin: var(--spacing-lg) auto;
+        padding: var(--spacing-lg);
+        max-width: 480px;
+        border-radius: var(--radius-medium);
+        box-shadow: var(--shadow-medium);
     }
+
     .detail-modal-close {
         position: absolute;
-        top: 10px;
-        right: 15px;
-        font-size: 20px;
+        top: var(--spacing-sm);
+        right: var(--spacing-sm);
+        font-size: 1.5rem;
         cursor: pointer;
+        color: var(--text-secondary);
+        padding: var(--spacing-xs);
     }
+
     .detail-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 15px;
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
     }
+
     .detail-item {
-        margin-bottom: 10px;
+        margin-bottom: var(--spacing-sm);
     }
+
     .detail-label {
-        font-weight: bold;
-        margin-bottom: 5px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: var(--spacing-xs);
+        font-size: 0.875rem;
     }
+
     .receipts-container {
-        margin-top: 20px;
+        margin-top: var(--spacing-lg);
     }
+
     .receipt-header {
-        background-color: #f5f5f5;
-        padding: 10px 15px;
-        border-bottom: 1px solid #ddd;
+        background-color: var(--surface-color);
+        padding: var(--spacing-md);
+        border-radius: var(--radius-medium);
         cursor: pointer;
-        font-weight: bold;
-        border-radius: 4px 4px 0 0;
-        border: 1px solid #ddd;
+        font-weight: 500;
+        box-shadow: var(--shadow-small);
+        margin-bottom: var(--spacing-sm);
+        transition: all 0.2s ease;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
+
     .receipt-header:hover {
-        background-color: #eee;
+        background-color: var(--primary-light);
+        transform: translateY(-1px);
     }
+
     .receipt-content {
-        padding: 0 15px;
+        background-color: var(--surface-color);
+        border-radius: var(--radius-medium);
+        margin-bottom: var(--spacing-md);
+        overflow: hidden;
+        box-shadow: var(--shadow-small);
         display: none;
-        border: 1px solid #ddd;
-        border-top: none;
-        border-radius: 0 0 4px 4px;
-        margin-bottom: 10px;
     }
+
     .receipt-content.open {
         display: block;
     }
+
     .receipt-item {
-        padding: 10px 0;
-        border-bottom: 1px solid #eee;
+        padding: var(--spacing-md);
+        border-bottom: 1px solid var(--border-color);
     }
+
     .receipt-item:last-child {
         border-bottom: none;
     }
+
     .variant-tag {
         display: inline-block;
-        background-color: #e9f5f8;
-        color: #0066cc;
-        padding: 2px 6px;
-        border-radius: 3px;
-        font-size: 0.85em;
-        margin-left: 8px;
+        background-color: var(--primary-light);
+        color: var(--primary-dark);
+        padding: var(--spacing-xs) var(--spacing-sm);
+        border-radius: var(--radius-small);
+        font-size: 0.875rem;
+        margin-left: var(--spacing-sm);
     }
+
     .badge {
-        display: inline-block;
-        min-width: 10px;
-        padding: 3px 7px;
-        font-size: 12px;
-        font-weight: 700;
-        line-height: 1;
-        color: #fff;
-        text-align: center;
-        white-space: nowrap;
-        vertical-align: middle;
-        background-color: #777;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 var(--spacing-sm);
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: white;
         border-radius: 10px;
-        margin-left: 5px;
+        margin-left: var(--spacing-sm);
     }
+
     .badge-success {
-        background-color: #5cb85c;
+        background-color: var(--primary-color);
     }
-    .action-links {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 15px;
-    }
-    .action-links a {
-        display: inline-block;
-        padding: 6px 12px;
-        text-decoration: none;
-        border-radius: 4px;
-        color: #fff;
-    }
-    .action-links a.import-receipts-link {
-        background-color: #f0ad4e;
-    }
-    .action-links a:hover {
-        opacity: 0.9;
-    }
-    .action-links a i {
-        margin-right: 5px;
-    }
-    @media (max-width: 768px) {
-        .detail-grid {
-            grid-template-columns: 1fr;
-        }
-    }
+
     .pagination-container {
         display: flex;
-        justify-content: center;
+        flex-direction: column;
         align-items: center;
-        margin: 20px 0;
-        gap: 10px;
+        gap: var(--spacing-md);
+        margin: var(--spacing-lg) 0;
     }
-    
+
     .pagination-info {
-        color: #666;
-        font-size: 0.9em;
+        color: var(--text-secondary);
+        font-size: 0.875rem;
     }
-    
+
     .pagination-controls {
         display: flex;
-        gap: 5px;
+        gap: var(--spacing-xs);
+        flex-wrap: wrap;
+        justify-content: center;
     }
-    
+
     .pagination-button {
-        padding: 5px 10px;
-        border: 1px solid #ddd;
-        background: white;
+        padding: var(--spacing-sm) var(--spacing-md);
+        border: none;
+        background: var(--surface-color);
         cursor: pointer;
-        border-radius: 4px;
-        color: #333;
-        transition: all 0.2s;
+        border-radius: var(--radius-small);
+        color: var(--text-primary);
+        transition: all 0.2s ease;
+        box-shadow: var(--shadow-small);
+        font-weight: 500;
     }
-    
+
     .pagination-button:hover:not(:disabled) {
-        background: #f0f0f0;
-        border-color: #aaa;
+        background: var(--primary-light);
+        transform: translateY(-1px);
     }
-    
+
     .pagination-button:disabled {
-        background: #f5f5f5;
-        color: #999;
+        background: var(--background-color);
+        color: var(--text-secondary);
         cursor: not-allowed;
+        box-shadow: none;
     }
-    
+
     .pagination-button.active {
-        background: #007bff;
+        background: var(--primary-color);
         color: white;
-        border-color: #0056b3;
     }
-    
+
     .page-size-selector {
-        padding: 5px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        margin-left: 10px;
+        padding: var(--spacing-sm);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-small);
+        background-color: var(--surface-color);
+        color: var(--text-primary);
+        font-size: 0.875rem;
+    }
+
+    #loadingIndicator {
+        text-align: center;
+        padding: var(--spacing-lg);
+        color: var(--text-secondary);
+    }
+
+    @media (max-width: 480px) {
+        .content-container {
+            padding: var(--spacing-xs);
+        }
+
+        .detail-modal-content {
+            margin: var(--spacing-sm);
+            padding: var(--spacing-md);
+        }
+
+        .action-links {
+            flex-direction: column;
+        }
+
+        .action-links a {
+            width: 100%;
+            justify-content: center;
+        }
     }
 </style>
 {% endblock %}
