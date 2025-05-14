@@ -323,6 +323,7 @@ def get_recepcion(id):
 def delete_recepcion(id):
     """
     Delete a specific kitchen reception and adjust inventory accordingly.
+    If removing ingredients would result in negative inventory, set to 0 instead.
     
     Path parameters:
     - id: Reception ID
@@ -338,7 +339,7 @@ def delete_recepcion(id):
         cursor.execute("BEGIN TRANSACTION")
         
         try:
-            # First, get all the reception details to know what to remove from inventory
+            # First, get all the reception details
             cursor.execute(
                 """
                 SELECT rd.ingrediente_id, rd.cantidad_recibida, i.nombre as ingrediente_nombre
@@ -357,7 +358,7 @@ def delete_recepcion(id):
                     "error": f"No existe la recepción con ID {id}"
                 }), 404
             
-            # Check if removing any ingredient would result in negative inventory
+            # Update inventory for each ingredient
             for detalle in detalles:
                 cursor.execute(
                     """
@@ -377,24 +378,16 @@ def delete_recepcion(id):
                         "error": f"No existe el ingrediente con ID {detalle['ingrediente_id']}"
                     }), 404
                 
-                nueva_cantidad = ingrediente['cantidad_actual'] - detalle['cantidad_recibida']
+                # Calculate new quantity, but don't let it go below 0
+                nueva_cantidad = max(0, ingrediente['cantidad_actual'] - detalle['cantidad_recibida'])
                 
-                if nueva_cantidad < 0:
-                    db.rollback()
-                    return jsonify({
-                        "success": False,
-                        "error": f"No es posible eliminar esta recepción porque resultaría en inventario negativo para {detalle['ingrediente_nombre']}. Cantidad actual: {ingrediente['cantidad_actual']}, Cantidad a eliminar: {detalle['cantidad_recibida']}"
-                    }), 400
-            
-            # Update inventory for each ingredient
-            for detalle in detalles:
                 cursor.execute(
                     """
                     UPDATE Ingredientes
-                    SET cantidad_actual = cantidad_actual - ?
+                    SET cantidad_actual = ?
                     WHERE id = ?
                     """,
-                    (detalle['cantidad_recibida'], detalle['ingrediente_id'])
+                    (nueva_cantidad, detalle['ingrediente_id'])
                 )
             
             # Delete the reception (this will cascade delete the details due to ON DELETE CASCADE)
