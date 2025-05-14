@@ -376,13 +376,14 @@
         const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
         const toast = document.getElementById('toast');
         let receptionToDelete = null;
+        let allReceptions = []; // Store all receptions
         
         // Load initial data
         loadRecepciones();
         
         // Event listeners
         searchInput.addEventListener('input', debounce(() => {
-            loadRecepciones();
+            filterReceptions(searchInput.value.trim().toLowerCase());
         }, 300));
 
         // Event delegation for delete buttons and collapsible headers
@@ -433,16 +434,8 @@
             emptyState.classList.add('d-none');
             recepcionesContainer.innerHTML = '';
             
-            // Build query parameters
-            const params = new URLSearchParams();
-            
-            // Add search filter if there's a search term
-            if (searchInput.value.trim()) {
-                params.append('ingrediente_nombre', searchInput.value.trim());
-            }
-            
-            // Fetch receptions
-            fetch(`/api/recepciones?${params.toString()}`)
+            // Fetch all receptions
+            fetch('/api/recepciones')
                 .then(response => response.json())
                 .then(data => {
                     // Hide loading spinner
@@ -452,8 +445,10 @@
                         if (data.data.length === 0) {
                             emptyState.classList.remove('d-none');
                         } else {
+                            // Store all receptions
+                            allReceptions = data.data;
                             // Render receptions
-                            renderReceptions(data.data);
+                            renderReceptions(allReceptions);
                         }
                     } else {
                         console.error('Error al cargar recepciones:', data.error);
@@ -466,9 +461,33 @@
                     showToast('error', 'Error de conexión');
                 });
         }
+
+        // Function to filter receptions client-side
+        function filterReceptions(searchTerm) {
+            if (!searchTerm) {
+                renderReceptions(allReceptions);
+                return;
+            }
+
+            const filteredReceptions = allReceptions.filter(reception => {
+                // Search in ingredients
+                return reception.ingredientes.some(ingrediente => 
+                    ingrediente.ingrediente_nombre.toLowerCase().includes(searchTerm)
+                );
+            });
+
+            if (filteredReceptions.length === 0) {
+                recepcionesContainer.innerHTML = '';
+                emptyState.classList.remove('d-none');
+            } else {
+                emptyState.classList.add('d-none');
+                renderReceptions(filteredReceptions);
+            }
+        }
         
         // Function to render receptions
         function renderReceptions(receptions) {
+            recepcionesContainer.innerHTML = '';
             receptions.forEach(reception => {
                 const card = document.createElement('div');
                 card.className = 'reception-card';
@@ -563,7 +582,10 @@
             .then(data => {
                 if (data.success) {
                     showToast('success', 'Recepción eliminada correctamente');
-                    loadRecepciones(); // Reload the list
+                    // Remove the deleted reception from allReceptions
+                    allReceptions = allReceptions.filter(r => r.id !== parseInt(receptionId));
+                    // Update the current view
+                    filterReceptions(searchInput.value.trim().toLowerCase());
                 } else {
                     showToast('error', data.error || 'Error al eliminar la recepción');
                 }
