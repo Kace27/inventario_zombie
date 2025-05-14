@@ -507,7 +507,10 @@
         
         // Utility functions
         function formatDateDisplay(dateStr) {
-            const date = new Date(dateStr);
+            // Parse the date string in YYYY-MM-DD format and adjust for local timezone
+            const [year, month, day] = dateStr.split('-').map(Number);
+            const date = new Date(year, month - 1, day); // month is 0-based in JavaScript
+            
             return date.toLocaleDateString('es-MX', {
                 weekday: 'long',
                 year: 'numeric',
