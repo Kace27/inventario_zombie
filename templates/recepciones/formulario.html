@@ -171,6 +171,12 @@
         flex-direction: column;
         padding: var(--spacing-md);
         border-bottom: 1px solid var(--border-color);
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .ingredient-item:hover {
+        background-color: var(--primary-light);
     }
     
     .ingredient-item:last-child {
@@ -180,7 +186,7 @@
     .ingredient-header {
         display: flex;
         justify-content: space-between;
-        margin-bottom: var(--spacing-sm);
+        align-items: center;
     }
     
     .ingredient-name {
@@ -193,6 +199,12 @@
         font-size: 0.875rem;
         color: var(--text-secondary);
         margin-left: var(--spacing-xs);
+    }
+
+    .ingredient-quantity {
+        font-size: 1rem;
+        color: var(--primary-color);
+        font-weight: 600;
     }
     
     /* Improved touch-friendly quantity controls */
@@ -530,6 +542,113 @@
     .admin-link a:hover {
         background-color: var(--primary-dark);
     }
+
+    /* Quantity Modal styles - Updated */
+    .quantity-modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+        animation: fadeIn 0.2s;
+    }
+    
+    .quantity-modal-content {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 90%;
+        max-width: 400px;
+        background-color: var(--surface-color);
+        border-radius: var(--radius-large);
+        padding: var(--spacing-lg);
+        box-shadow: var(--shadow-medium);
+        animation: zoomIn 0.3s;
+    }
+
+    @keyframes zoomIn {
+        from { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+        to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+    
+    .quantity-modal-header {
+        text-align: center;
+        margin-bottom: var(--spacing-lg);
+    }
+    
+    .quantity-modal-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+
+    .quantity-modal-unit {
+        font-size: 1rem;
+        color: var(--text-secondary);
+        margin-bottom: var(--spacing-md);
+    }
+
+    .quantity-control {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--spacing-md);
+        padding: var(--spacing-md) 0;
+    }
+    
+    .quantity-btn {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        border: none;
+        background-color: var(--primary-color);
+        color: white;
+        font-size: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        -webkit-tap-highlight-color: transparent;
+    }
+    
+    .quantity-btn:active {
+        background-color: var(--primary-dark);
+    }
+    
+    .quantity-value-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 120px;
+        height: 60px;
+        background-color: var(--background-color);
+        border-radius: 12px;
+        padding: 0 var(--spacing-sm);
+    }
+    
+    input.quantity-value {
+        width: 100%;
+        height: 100%;
+        text-align: center;
+        border: none;
+        background: transparent;
+        color: var(--text-primary);
+        font-size: 1.5rem;
+        font-weight: 600;
+        -moz-appearance: textfield;
+    }
+    
+    input.quantity-value::-webkit-outer-spin-button,
+    input.quantity-value::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
 </style>
 {% endblock %}
 
@@ -579,12 +698,32 @@
             </div>
         </div>
     </div>
-</div>
-{% endblock %}
 
-{% block scripts %}
+    <!-- Quantity Modal - Updated structure -->
+    <div id="quantityModal" class="quantity-modal">
+        <div class="quantity-modal-content">
+            <div class="quantity-modal-header">
+                <h2 class="quantity-modal-title">Ingrediente</h2>
+                <div class="quantity-modal-unit">Unidad</div>
+            </div>
+            <div class="quantity-control">
+                <button class="quantity-btn minus" onclick="adjustQuantity(-1)">-</button>
+                <div class="quantity-value-container">
+                    <input type="number" class="quantity-value" value="0" onchange="updateQuantity(this.value)">
+                </div>
+                <button class="quantity-btn plus" onclick="adjustQuantity(1)">+</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    console.log('Script iniciando...'); // Debug log inicial
+
+    // Función principal de inicialización
+    function initializeApp() {
+        console.log('Inicializando aplicación...'); // Debug log
+
         // DOM elements
         const receptionForm = document.getElementById('receptionForm');
         const statusMessage = document.getElementById('statusMessage');
@@ -601,52 +740,71 @@
         let categorizedIngredients = {};
         let selectedIngredients = {};
         
-        // Initialize - load ingredients on page load
+        // Initialize - load ingredients immediately
         loadIngredients();
         
         // Event listeners
-        receptionForm.addEventListener('submit', handleFormSubmit);
-        confirmBtn.addEventListener('click', submitReception);
-        cancelBtn.addEventListener('click', closeModalHandler);
-        closeModal.addEventListener('click', closeModalHandler);
-        
-        // Close modal when clicking outside
-        window.addEventListener('click', function(event) {
-            if (event.target === confirmModal) {
-                closeModalHandler();
-            }
-        });
-        
-        ingredientSearch.addEventListener('input', function() {
-            const searchTerm = this.value.trim().toLowerCase();
-            filterIngredients(searchTerm);
-        });
-        
+        if (receptionForm) {
+            receptionForm.addEventListener('submit', handleFormSubmit);
+        }
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', handleSubmitReception);
+        }
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', closeModalHandler);
+        }
+        if (closeModal) {
+            closeModal.addEventListener('click', closeModalHandler);
+        }
+        if (ingredientSearch) {
+            ingredientSearch.addEventListener('input', function() {
+                const searchTerm = this.value.trim().toLowerCase();
+                filterIngredients(searchTerm);
+            });
+        }
+
         // Function to load ingredients from API
         function loadIngredients() {
+            console.log('Iniciando carga de ingredientes...'); // Debug log
             showStatus('info', 'Cargando ingredientes...');
             
             fetch('/api/ingredientes')
                 .then(response => {
+                    console.log('Respuesta recibida:', response.status); // Debug log
                     if (!response.ok) {
+                        console.error('Error en la respuesta:', response.status, response.statusText);
                         throw new Error(`Error HTTP: ${response.status}`);
                     }
                     return response.json();
                 })
                 .then(data => {
-                    if (Array.isArray(data)) {
-                        ingredientsList = data;
-                        categorizeIngredients();
-                        renderIngredients();
-                        showStatus('success', `${ingredientsList.length} ingredientes cargados`);
-                    } else {
-                        console.error('Formato de datos inesperado:', data);
-                        showStatus('error', 'Formato de respuesta inesperado');
+                    console.log('Datos recibidos:', data); // Debug log
+                    
+                    // Asegurarse de que tenemos un array de ingredientes
+                    let ingredients = data;
+                    if (data && data.ingredientes) {
+                        ingredients = data.ingredientes;
                     }
+                    
+                    if (!Array.isArray(ingredients)) {
+                        throw new Error('La respuesta no contiene un array de ingredientes válido');
+                    }
+                    
+                    ingredientsList = ingredients;
+                    console.log('Lista de ingredientes procesada:', ingredientsList); // Debug log
+                    
+                    if (ingredientsList.length === 0) {
+                        showStatus('info', 'No hay ingredientes disponibles');
+                        return;
+                    }
+                    
+                    categorizeIngredients();
+                    renderIngredients();
+                    showStatus('success', `${ingredientsList.length} ingredientes cargados`);
                 })
                 .catch(error => {
                     console.error('Error al cargar ingredientes:', error);
-                    showStatus('error', 'Error: ' + error.message);
+                    showStatus('error', 'Error al cargar ingredientes: ' + error.message);
                 });
         }
         
@@ -656,6 +814,11 @@
             
             // First group by categoria
             ingredientsList.forEach(ingredient => {
+                if (!ingredient || typeof ingredient !== 'object') {
+                    console.error('Ingrediente inválido:', ingredient);
+                    return;
+                }
+                
                 const category = ingredient.categoria || 'Sin categoría';
                 
                 if (!categorizedIngredients[category]) {
@@ -671,6 +834,8 @@
                     a.nombre.localeCompare(b.nombre)
                 );
             }
+            
+            console.log('Categorized Ingredients:', categorizedIngredients); // Debug log
         }
         
         // Function to render all ingredients grouped by category
@@ -725,53 +890,22 @@
             const itemElement = document.createElement('div');
             itemElement.className = 'ingredient-item';
             itemElement.setAttribute('data-id', ingredient.id);
+            
             itemElement.innerHTML = `
                 <div class="ingredient-header">
-                    <div class="ingredient-name">
-                        ${ingredient.nombre} <span class="ingredient-unit">(${ingredient.unidad_medida})</span>
+                    <div>
+                        <span class="ingredient-name">${ingredient.nombre}</span>
+                        <span class="ingredient-unit">(${ingredient.unidad_medida})</span>
                     </div>
-                </div>
-                <div class="quantity-control">
-                    <button type="button" class="quantity-btn minus" data-id="${ingredient.id}">−</button>
-                    <div class="quantity-value-container">
-                        <input type="number" class="quantity-value" value="0" data-id="${ingredient.id}" min="0" step="0.01">
-                    </div>
-                    <button type="button" class="quantity-btn plus" data-id="${ingredient.id}">+</button>
+                    <span class="ingredient-quantity">0 ${ingredient.unidad_medida}</span>
                 </div>
             `;
             
+            itemElement.addEventListener('click', function() {
+                openQuantityModal(this);
+            });
+            
             container.appendChild(itemElement);
-            
-            // Add event listeners for quantity buttons
-            const minusBtn = itemElement.querySelector('.minus');
-            const plusBtn = itemElement.querySelector('.plus');
-            const quantityInput = itemElement.querySelector('.quantity-value');
-            
-            minusBtn.addEventListener('click', function() {
-                const id = this.getAttribute('data-id');
-                const input = document.querySelector(`.quantity-value[data-id="${id}"]`);
-                const currentValue = parseFloat(input.value) || 0;
-                
-                if (currentValue > 0) {
-                    const newValue = Math.max(0, (currentValue - 1));
-                    input.value = newValue.toFixed(2);
-                    updateSelectedIngredient(id, parseFloat(input.value));
-                }
-            });
-            
-            plusBtn.addEventListener('click', function() {
-                const id = this.getAttribute('data-id');
-                const input = document.querySelector(`.quantity-value[data-id="${id}"]`);
-                const currentValue = parseFloat(input.value) || 0;
-                
-                input.value = (currentValue + 1).toFixed(2);
-                updateSelectedIngredient(id, parseFloat(input.value));
-            });
-            
-            quantityInput.addEventListener('input', function() {
-                const id = this.getAttribute('data-id');
-                updateSelectedIngredient(id, parseFloat(this.value) || 0);
-            });
         }
         
         // Function to update the selected ingredient
@@ -867,90 +1001,68 @@
                 }
             }
             
-            // Add notes if any
-            const notes = document.getElementById('notas').value.trim();
-            if (notes) {
-                const notesElement = document.createElement('div');
-                notesElement.className = 'order-summary-item';
-                notesElement.innerHTML = `
-                    <div><strong>Notas:</strong></div>
-                    <div>${notes}</div>
-                `;
-                orderSummary.appendChild(notesElement);
-            }
-            
-            // Show modal
             confirmModal.style.display = 'block';
-            document.body.style.overflow = 'hidden'; // Prevent scrolling
         }
         
-        // Function to close modal
+        // Function to close confirmation modal
         function closeModalHandler() {
             confirmModal.style.display = 'none';
-            document.body.style.overflow = ''; // Restore scrolling
         }
-        
-        // Function to submit reception to API
-        function submitReception() {
-            const ingredientItems = [];
+
+        let currentIngredient = null;
+        const quantityModal = document.getElementById('quantityModal');
+
+        window.closeQuantityModal = function() {
+            if (quantityModal) {
+                quantityModal.style.display = 'none';
+                document.body.style.overflow = '';
+                currentIngredient = null;
+            }
+        };
+
+        window.adjustQuantity = function(delta) {
+            if (!currentIngredient) return;
             
-            // Prepare data for each ingredient
-            for (const id in selectedIngredients) {
-                ingredientItems.push({
-                    ingrediente_id: parseInt(id),
-                    cantidad_recibida: selectedIngredients[id]
-                });
+            const input = quantityModal.querySelector('.quantity-value');
+            if (!input) return;
+            
+            const newValue = Math.max(0, parseInt(input.value || 0) + delta);
+            input.value = newValue;
+            updateQuantity(newValue);
+        };
+
+        window.updateQuantity = function(value) {
+            if (!currentIngredient) return;
+            
+            const quantity = Math.max(0, parseInt(value) || 0);
+            
+            // Update selected ingredients
+            if (quantity === 0) {
+                delete selectedIngredients[currentIngredient.id];
+            } else {
+                selectedIngredients[currentIngredient.id] = quantity;
             }
             
-            // Get notes
-            const notas = document.getElementById('notas').value;
-            
-            // Prepare the request data
-            const formData = {
-                ingredientes: ingredientItems,
-                notas: notas
-            };
-            
-            // Show loading status
-            showStatus('info', 'Registrando ingredientes...');
-            
-            // Send the request
-            fetch('/api/recepciones', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(formData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showStatus('success', 'Recepción registrada correctamente');
-                    
-                    // Reset form
-                    document.getElementById('notas').value = '';
-                    // Reset all quantity inputs
-                    document.querySelectorAll('.quantity-value').forEach(input => {
-                        input.value = "0";
-                    });
-                    selectedIngredients = {};
-                    
-                    // Close modal
-                    closeModalHandler();
-                } else {
-                    showStatus('error', data.error || 'Error al registrar la recepción');
-                    closeModalHandler();
+            // Update display in the list
+            const quantityElement = currentIngredient.element.querySelector('.ingredient-quantity');
+            if (quantityElement) {
+                quantityElement.textContent = `${quantity} ${currentIngredient.unit}`;
+            }
+        };
+
+        // Close modal when clicking outside
+        if (quantityModal) {
+            quantityModal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeQuantityModal();
                 }
-            })
-            .catch(error => {
-                console.error('Error al registrar recepción:', error);
-                showStatus('error', 'Error al procesar la recepción');
-                closeModalHandler();
             });
         }
-        
+
         // Function to show status message
         function showStatus(type, message) {
+            if (!statusMessage) return;
+            
             statusMessage.textContent = message;
             statusMessage.className = 'status-message';
             statusMessage.classList.add(`status-${type}`);
@@ -961,6 +1073,168 @@
                 statusMessage.style.display = 'none';
             }, 5000);
         }
-    });
+
+        // Function to handle the actual submission of the reception
+        async function handleSubmitReception() {
+            try {
+                showStatus('info', 'Enviando recepción...');
+                
+                const notas = document.getElementById('notas').value;
+                
+                // Formatear los datos según el contrato de la API
+                const recepcionData = {
+                    ingredientes: Object.entries(selectedIngredients).map(([id, cantidad]) => ({
+                        ingrediente_id: parseInt(id),
+                        cantidad_recibida: cantidad  // Cambio de 'cantidad' a 'cantidad_recibida' según el contrato
+                    })),
+                    notas: notas || undefined  // Si notas está vacío, lo enviamos como undefined
+                };
+
+                // Validar que hay ingredientes seleccionados
+                if (!recepcionData.ingredientes.length) {
+                    throw new Error('Debe seleccionar al menos un ingrediente');
+                }
+
+                console.log('Enviando datos:', recepcionData); // Para debug
+
+                const response = await fetch('/api/recepciones', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(recepcionData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `Error HTTP: ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                if (!result.success) {
+                    throw new Error(result.error || 'Error al procesar la recepción');
+                }
+
+                showStatus('success', 'Recepción registrada exitosamente');
+                
+                // Limpiar el formulario
+                selectedIngredients = {};
+                document.getElementById('notas').value = '';
+                
+                // Actualizar la visualización
+                document.querySelectorAll('.ingredient-quantity').forEach(el => {
+                    const unit = el.textContent.split(' ')[1];
+                    el.textContent = `0 ${unit}`;
+                });
+                
+                // Cerrar el modal de confirmación
+                closeModalHandler();
+                
+                // Recargar la página después de 2 segundos
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+
+            } catch (error) {
+                console.error('Error al enviar la recepción:', error);
+                showStatus('error', 'Error al registrar la recepción: ' + error.message);
+                
+                // Mantener el modal abierto en caso de error
+                if (error.message.includes('Debe seleccionar')) {
+                    closeModalHandler(); // Solo cerramos si es error de validación
+                }
+            }
+        }
+
+        // Inicialización del modal y sus eventos
+        function initializeQuantityModal() {
+            const quantityModal = document.getElementById('quantityModal');
+            let currentIngredient = null;
+
+            // Función para abrir el modal
+            window.openQuantityModal = function(ingredientElement) {
+                currentIngredient = {
+                    id: ingredientElement.dataset.id,
+                    name: ingredientElement.querySelector('.ingredient-name').textContent,
+                    unit: ingredientElement.querySelector('.ingredient-unit').textContent.replace(/[()]/g, ''),
+                    element: ingredientElement
+                };
+
+                const currentQuantity = selectedIngredients[currentIngredient.id] || 0;
+                
+                const modalTitle = quantityModal.querySelector('.quantity-modal-title');
+                const modalUnit = quantityModal.querySelector('.quantity-modal-unit');
+                const quantityInput = quantityModal.querySelector('.quantity-value');
+                
+                if (modalTitle && modalUnit && quantityInput) {
+                    modalTitle.textContent = currentIngredient.name;
+                    modalUnit.textContent = currentIngredient.unit;
+                    quantityInput.value = currentQuantity;
+                }
+                
+                quantityModal.style.display = 'block';
+                document.body.style.overflow = 'hidden';
+            };
+
+            // Función para cerrar el modal
+            window.closeQuantityModal = function() {
+                if (quantityModal) {
+                    quantityModal.style.display = 'none';
+                    document.body.style.overflow = '';
+                    currentIngredient = null;
+                }
+            };
+
+            // Función para ajustar la cantidad
+            window.adjustQuantity = function(delta) {
+                if (!currentIngredient) return;
+                
+                const input = quantityModal.querySelector('.quantity-value');
+                if (!input) return;
+                
+                const newValue = Math.max(0, parseInt(input.value || 0) + delta);
+                input.value = newValue;
+                updateQuantity(newValue);
+            };
+
+            // Función para actualizar la cantidad
+            window.updateQuantity = function(value) {
+                if (!currentIngredient) return;
+                
+                const quantity = Math.max(0, parseInt(value) || 0);
+                
+                if (quantity === 0) {
+                    delete selectedIngredients[currentIngredient.id];
+                } else {
+                    selectedIngredients[currentIngredient.id] = quantity;
+                }
+                
+                const quantityElement = currentIngredient.element.querySelector('.ingredient-quantity');
+                if (quantityElement) {
+                    quantityElement.textContent = `${quantity} ${currentIngredient.unit}`;
+                }
+            };
+
+            // Evento para cerrar el modal al hacer clic fuera
+            if (quantityModal) {
+                quantityModal.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        closeQuantityModal();
+                    }
+                });
+            }
+        }
+
+        // Inicializar el modal
+        initializeQuantityModal();
+    }
+
+    // Asegurar que el script se ejecute tanto en DOMContentLoaded como después
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    } else {
+        initializeApp();
+    }
 </script>
-{% endblock %} 
+{% endblock %}
