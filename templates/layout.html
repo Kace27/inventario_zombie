@@ -99,6 +99,7 @@
                         <li><a href="{{ url_for('auth.lista_usuarios') }}"><i class="fas fa-users"></i> Usuarios</a></li>
                     {% elif current_user.rol == 'cocina' %}
                         <li><a href="{{ url_for('recepciones_web.formulario') }}"><i class="fas fa-utensils"></i> Recepción</a></li>
+                        <li><a href="{{ url_for('recepciones_web.historial') }}"><i class="fas fa-clipboard-list"></i> Historial</a></li>
                     {% endif %}
                     <li class="user-menu">
                         <a href="#"><i class="fas fa-user-circle"></i> {{ current_user.nombre }}</a>

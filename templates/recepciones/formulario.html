@@ -537,13 +537,11 @@
 <div class="container">
     <h1>Recepción de Ingredientes</h1>
     
-    {% if current_user.rol == 'admin' %}
     <div class="admin-link">
         <a href="{{ url_for('recepciones_web.historial') }}">
             <i class="fas fa-clipboard-list"></i> Ver historial de recepciones
         </a>
     </div>
-    {% endif %}
     
     <div id="statusMessage" class="status-message"></div>
     

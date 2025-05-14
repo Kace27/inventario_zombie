@@ -315,6 +315,13 @@
 <div class="container">
     <h1>Historial de Recepciones</h1>
     
+    <!-- Add user role information -->
+    <script>
+        const current_user = {
+            rol: "{{ current_user.rol }}"
+        };
+    </script>
+    
     <!-- Search bar -->
     <div class="search-wrapper">
         <div class="search-container">
@@ -383,7 +390,7 @@
             const deleteBtn = e.target.closest('.delete-btn');
             const header = e.target.closest('.reception-header');
 
-            if (deleteBtn) {
+            if (deleteBtn && current_user.rol === 'admin') {
                 e.stopPropagation(); // Prevent header click when clicking delete
                 const receptionId = deleteBtn.getAttribute('data-reception-id');
                 receptionToDelete = receptionId;
@@ -476,10 +483,12 @@
                             <div class="reception-date">${formattedDate}</div>
                             <div class="reception-time">${reception.hora_recepcion}</div>
                         </div>
-                        <button class="delete-btn" data-reception-id="${reception.id}">
-                            <i class="fas fa-trash"></i>
-                            Eliminar
-                        </button>
+                        ${current_user.rol === 'admin' ? `
+                            <button class="delete-btn" data-reception-id="${reception.id}">
+                                <i class="fas fa-trash"></i>
+                                Eliminar
+                            </button>
+                        ` : ''}
                         <div class="reception-toggle">
                             <i class="fas fa-chevron-up"></i>
                         </div>
