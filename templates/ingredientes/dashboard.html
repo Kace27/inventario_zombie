@@ -28,6 +28,7 @@
         --spacing-sm: 8px;
         --spacing-md: 16px;
         --spacing-lg: 24px;
+        --header-height: 100px;
     }
 
     * {
@@ -43,6 +44,7 @@
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
         overflow-x: hidden;
+        padding-top: calc(var(--header-height) + var(--spacing-lg));
     }
 
     .container {
@@ -53,56 +55,54 @@
     }
 
     .page-header {
-        text-align: center;
-        margin-bottom: var(--spacing-lg);
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: var(--header-height);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 var(--spacing-md);
+        background-color: var(--surface-color);
+        border-bottom: 1px solid var(--border-color);
+        box-shadow: var(--shadow-small);
+        z-index: 100;
     }
 
     h1 {
-        font-size: 1.5rem;
+        font-size: 1.25rem;
         font-weight: 600;
-        color: var(--secondary-color);
-        margin-bottom: var(--spacing-md);
-    }
-
-    .dashboard-container {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: var(--spacing-md);
-        margin-bottom: var(--spacing-lg);
-    }
-
-    .dashboard-card {
-        background-color: var(--surface-color);
-        border-radius: var(--radius-medium);
-        box-shadow: var(--shadow-small);
-        padding: var(--spacing-lg);
-        transition: all 0.2s ease;
-    }
-
-    .dashboard-card:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--shadow-medium);
-    }
-
-    .dashboard-card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: var(--spacing-md);
-    }
-
-    .dashboard-card-title {
-        font-size: 1rem;
-        font-weight: 600;
-        color: var(--text-secondary);
+        color: var(--text-primary);
         margin: 0;
     }
 
-    .dashboard-card-value {
-        font-size: 2rem;
-        font-weight: 700;
+    .header-stats {
+        display: flex;
+        gap: var(--spacing-lg);
+        align-items: center;
+    }
+
+    .stat-item {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+
+    .stat-value {
+        font-weight: 600;
         color: var(--primary-color);
-        margin-top: var(--spacing-sm);
+    }
+
+    .stat-warning {
+        color: var(--warning-color);
+    }
+
+    .main-content {
+        position: relative;
+        z-index: 1;
     }
 
     .tab-container {
@@ -120,7 +120,7 @@
     }
 
     .tab-button {
-        padding: var(--spacing-md) var(--spacing-lg);
+        padding: var(--spacing-sm) var(--spacing-lg);
         background: none;
         border: none;
         color: var(--text-secondary);
@@ -141,7 +141,7 @@
 
     .tab-content {
         display: none;
-        padding: var(--spacing-lg);
+        padding: var(--spacing-md);
     }
 
     .tab-content.active {
@@ -151,7 +151,7 @@
     .filter-row {
         display: flex;
         gap: var(--spacing-md);
-        margin-bottom: var(--spacing-lg);
+        margin-bottom: var(--spacing-md);
     }
 
     .filter-item {
@@ -160,10 +160,10 @@
 
     .form-control {
         width: 100%;
-        padding: var(--spacing-md);
+        padding: var(--spacing-sm) var(--spacing-md);
         border: 1px solid var(--border-color);
         border-radius: var(--radius-medium);
-        font-size: 1rem;
+        font-size: 0.875rem;
         transition: all 0.2s ease;
     }
 
@@ -193,25 +193,56 @@
         font-size: 0.875rem;
     }
 
-    .stock-table tr:last-child td {
-        border-bottom: none;
+    .ingredient-cell {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-xs);
+        width: 100%;
     }
 
-    .stock-table tr:hover {
-        background-color: var(--primary-light);
+    .ingredient-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
     }
 
-    .low-stock {
+    .ingredient-name {
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+    }
+
+    .ingredient-unit {
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+        font-weight: normal;
+    }
+
+    .stock-status {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-xs);
+        width: 100%;
+    }
+
+    .status-text {
+        font-size: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+    }
+
+    .status-text.low-stock {
         color: var(--error-color);
-        font-weight: 600;
     }
 
-    .stock-warning {
+    .status-text.stock-warning {
         color: var(--warning-color);
-        font-weight: 600;
     }
 
-    .stock-ok {
+    .status-text.stock-ok {
         color: var(--success-color);
     }
 
@@ -219,8 +250,7 @@
         width: 100%;
         background-color: var(--border-color);
         border-radius: var(--radius-small);
-        height: 6px;
-        margin-top: var(--spacing-xs);
+        height: 4px;
         overflow: hidden;
     }
 
@@ -342,12 +372,32 @@
     }
 
     @media (max-width: 768px) {
-        .container {
-            padding: var(--spacing-sm);
+        :root {
+            --header-height: auto;
         }
 
-        .dashboard-container {
-            grid-template-columns: 1fr;
+        body {
+            padding-top: 120px;
+        }
+
+        .page-header {
+            height: auto;
+            flex-direction: column;
+            padding: var(--spacing-md);
+        }
+
+        .header-stats {
+            width: 100%;
+            flex-wrap: wrap;
+            gap: var(--spacing-md);
+            justify-content: space-between;
+            padding: var(--spacing-sm) 0;
+        }
+
+        .stat-item {
+            flex: 1;
+            min-width: 120px;
+            justify-content: center;
         }
 
         .filter-row {
@@ -377,10 +427,39 @@
             padding: var(--spacing-md);
         }
 
-        .stock-table {
+        .stock-table thead {
+            display: none;
+        }
+
+        .stock-table, 
+        .stock-table tbody, 
+        .stock-table tr, 
+        .stock-table td {
             display: block;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
+            width: 100%;
+        }
+
+        .stock-table tr {
+            margin-bottom: var(--spacing-md);
+            background-color: var(--surface-color);
+            border-radius: var(--radius-medium);
+            box-shadow: var(--shadow-small);
+            overflow: hidden;
+        }
+
+        .stock-table td {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: none;
+        }
+
+        .stock-table td:last-child {
+            display: none;
+        }
+
+        .actions-cell {
+            display: flex;
+            justify-content: flex-end;
+            padding-top: var(--spacing-xs);
         }
     }
 </style>
@@ -390,95 +469,49 @@
 <div class="container">
     <div class="page-header">
         <h1>Dashboard de Inventario</h1>
-    </div>
-
-    <div class="dashboard-container">
-        <div class="dashboard-card">
-            <div class="dashboard-card-header">
-                <h3 class="dashboard-card-title">Total de ingredientes</h3>
-                <i class="fas fa-carrot fa-2x"></i>
+        <div class="header-stats">
+            <div class="stat-item">
+                <i class="fas fa-carrot"></i>
+                <span>Total: <span class="stat-value" id="totalIngredients">--</span></span>
             </div>
-            <div class="dashboard-card-value" id="totalIngredients">--</div>
-        </div>
-        
-        <div class="dashboard-card">
-            <div class="dashboard-card-header">
-                <h3 class="dashboard-card-title">Ingredientes con stock bajo</h3>
-                <i class="fas fa-exclamation-triangle fa-2x" style="color: #f44336;"></i>
+            <div class="stat-item">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>Stock bajo: <span class="stat-value stat-warning" id="lowStockCount">--</span></span>
             </div>
-            <div class="dashboard-card-value" id="lowStockCount">--</div>
-        </div>
-        
-        <div class="dashboard-card">
-            <div class="dashboard-card-header">
-                <h3 class="dashboard-card-title">Recepciones hoy</h3>
-                <i class="fas fa-truck-loading fa-2x"></i>
+            <div class="stat-item">
+                <i class="fas fa-truck-loading"></i>
+                <span>Recepciones: <span class="stat-value" id="todayReceptions">--</span></span>
             </div>
-            <div class="dashboard-card-value" id="todayReceptions">--</div>
         </div>
     </div>
 
     <div class="tab-container">
-        <div class="tab-buttons">
-            <div class="tab-button active" data-tab="current-stock">Inventario actual</div>
-            <div class="tab-button" data-tab="adjust-stock">Ajustar inventario</div>
-        </div>
-        
-        <div class="tab-content active" id="current-stock">
-            <div class="filter-row">
-                <div class="filter-item">
-                    <input type="text" id="searchIngredient" class="form-control" placeholder="Buscar ingrediente...">
-                </div>
-                <div class="filter-item">
-                    <select id="stockFilter" class="form-control">
-                        <option value="all">Todos los ingredientes</option>
-                        <option value="low">Solo stock bajo</option>
-                        <option value="warning">Stock en advertencia</option>
-                    </select>
-                </div>
+        <div class="filter-row">
+            <div class="filter-item">
+                <input type="text" id="searchIngredient" class="form-control" placeholder="Buscar ingrediente...">
             </div>
-            
-            <div class="table-responsive">
-                <table class="stock-table" id="stockTable">
-                    <thead>
-                        <tr>
-                            <th>Ingrediente</th>
-                            <th>Unidad de medida</th>
-                            <th>Stock actual</th>
-                            <th>Stock mínimo</th>
-                            <th>Estado</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="stockTableBody">
-                        <!-- Filled by JavaScript -->
-                    </tbody>
-                </table>
+            <div class="filter-item">
+                <select id="stockFilter" class="form-control">
+                    <option value="all">Todos los ingredientes</option>
+                    <option value="low">Solo stock bajo</option>
+                    <option value="warning">Stock en advertencia</option>
+                </select>
             </div>
         </div>
         
-        <div class="tab-content" id="adjust-stock">
-            <div class="filter-row">
-                <div class="filter-item">
-                    <input type="text" id="adjustSearchIngredient" class="form-control" placeholder="Buscar ingrediente para ajustar...">
-                </div>
-            </div>
-            
-            <div class="table-responsive">
-                <table class="stock-table" id="adjustStockTable">
-                    <thead>
-                        <tr>
-                            <th>Ingrediente</th>
-                            <th>Unidad de medida</th>
-                            <th>Stock actual</th>
-                            <th>Ajustar</th>
-                        </tr>
-                    </thead>
-                    <tbody id="adjustStockTableBody">
-                        <!-- Filled by JavaScript -->
-                    </tbody>
-                </table>
-            </div>
+        <div class="table-responsive">
+            <table class="stock-table" id="stockTable">
+                <thead>
+                    <tr>
+                        <th>Ingrediente</th>
+                        <th>Stock actual</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="stockTableBody">
+                    <!-- Filled by JavaScript -->
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -538,16 +571,9 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // DOM elements
-        const totalIngredients = document.getElementById('totalIngredients');
-        const lowStockCount = document.getElementById('lowStockCount');
-        const todayReceptions = document.getElementById('todayReceptions');
         const searchIngredient = document.getElementById('searchIngredient');
-        const adjustSearchIngredient = document.getElementById('adjustSearchIngredient');
         const stockFilter = document.getElementById('stockFilter');
         const stockTableBody = document.getElementById('stockTableBody');
-        const adjustStockTableBody = document.getElementById('adjustStockTableBody');
-        const tabButtons = document.querySelectorAll('.tab-button');
-        const tabContents = document.querySelectorAll('.tab-content');
         const adjustModal = document.getElementById('adjustModal');
         const adjustForm = document.getElementById('adjustForm');
         const adjustIngredientId = document.getElementById('adjustIngredientId');
@@ -560,30 +586,13 @@
         
         // State variables
         let ingredientsList = [];
-        let todayReceptionsCount = 0;
         
         // Initialize
         loadDashboardData();
         
         // Event listeners
         searchIngredient.addEventListener('input', filterStockTable);
-        adjustSearchIngredient.addEventListener('input', filterAdjustTable);
         stockFilter.addEventListener('change', filterStockTable);
-        
-        // Tab switching
-        tabButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const tabId = this.getAttribute('data-tab');
-                
-                // Remove active class from all buttons and contents
-                tabButtons.forEach(btn => btn.classList.remove('active'));
-                tabContents.forEach(content => content.classList.remove('active'));
-                
-                // Add active class to current button and content
-                this.classList.add('active');
-                document.getElementById(tabId).classList.add('active');
-            });
-        });
         
         // Modal events
         modalClose.addEventListener('click', closeModal);
@@ -634,7 +643,6 @@
                     
                     // Render tables
                     renderStockTable();
-                    renderAdjustTable();
                 })
                 .catch(error => {
                     console.error('Error loading ingredients:', error);
@@ -721,17 +729,30 @@
                 }
                 
                 row.innerHTML = `
-                    <td>${ingredient.nombre}</td>
-                    <td>${ingredient.unidad_medida}</td>
-                    <td>${ingredient.cantidad_actual}</td>
-                    <td>${ingredient.stock_minimo !== null ? ingredient.stock_minimo : '-'}</td>
-                    <td class="${statusClass}">
-                        ${stockStatus}
-                        <div class="progress-container">
-                            <div class="progress-bar ${progressClass}" style="width: ${progressWidth}"></div>
+                    <td>
+                        <div class="ingredient-cell">
+                            <div class="ingredient-header">
+                                <div class="ingredient-name">
+                                    ${ingredient.nombre}
+                                    <span class="ingredient-unit">(${ingredient.unidad_medida})</span>
+                                </div>
+                                <button class="btn btn-sm btn-primary adjust-btn" data-id="${ingredient.id}">
+                                    Ajustar
+                                </button>
+                            </div>
+                            <div class="stock-status">
+                                <div class="status-text ${statusClass}">
+                                    <span>${ingredient.cantidad_actual}</span>
+                                    <span>${stockStatus}</span>
+                                    ${ingredient.stock_minimo !== null ? `<span>/ Min: ${ingredient.stock_minimo}</span>` : ''}
+                                </div>
+                                <div class="progress-container">
+                                    <div class="progress-bar ${progressClass}" style="width: ${progressWidth}"></div>
+                                </div>
+                            </div>
                         </div>
                     </td>
-                    <td>
+                    <td class="actions-cell">
                         <button class="btn btn-sm btn-primary adjust-btn" data-id="${ingredient.id}">
                             Ajustar
                         </button>
@@ -751,51 +772,9 @@
             });
         }
         
-        // Function to render adjustment table
-        function renderAdjustTable() {
-            adjustStockTableBody.innerHTML = '';
-            
-            const searchTerm = adjustSearchIngredient.value.trim().toLowerCase();
-            
-            const filteredIngredients = ingredientsList.filter(ingredient =>
-                ingredient.nombre.toLowerCase().includes(searchTerm)
-            );
-            
-            filteredIngredients.forEach(ingredient => {
-                const row = document.createElement('tr');
-                
-                row.innerHTML = `
-                    <td>${ingredient.nombre}</td>
-                    <td>${ingredient.unidad_medida}</td>
-                    <td>${ingredient.cantidad_actual}</td>
-                    <td>
-                        <button class="btn btn-sm btn-primary adjust-btn" data-id="${ingredient.id}">
-                            Ajustar
-                        </button>
-                    </td>
-                `;
-                
-                adjustStockTableBody.appendChild(row);
-            });
-            
-            // Add event listeners to adjust buttons
-            const adjustButtons = document.querySelectorAll('.adjust-btn');
-            adjustButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    const id = this.getAttribute('data-id');
-                    openAdjustModal(id);
-                });
-            });
-        }
-        
         // Function to filter stock table
         function filterStockTable() {
             renderStockTable();
-        }
-        
-        // Function to filter adjust table
-        function filterAdjustTable() {
-            renderAdjustTable();
         }
         
         // Function to open adjustment modal
@@ -922,7 +901,6 @@
                 
                 // Re-render tables
                 renderStockTable();
-                renderAdjustTable();
                 
                 // Refresh dashboard counts
                 const lowStockIngredients = ingredientsList.filter(ingredient => 
