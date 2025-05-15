@@ -1,0 +1,1050 @@
+{
+  "fecha_exportacion": "2025-05-14T14:22:10.208247",
+  "articulos": [
+    {
+      "id": 11,
+      "nombre": "Cono Boneless",
+      "categoria": "Platos fuertes",
+      "subcategoria": "Cono",
+      "precio_venta": 98.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": [
+        {
+          "ingrediente_id": 10,
+          "cantidad": 0.25
+        },
+        {
+          "ingrediente_id": 33,
+          "cantidad": 1.0
+        },
+        {
+          "ingrediente_id": 88,
+          "cantidad": 0.1
+        },
+        {
+          "ingrediente_id": 17,
+          "cantidad": 0.05
+        },
+        {
+          "ingrediente_id": 65,
+          "cantidad": 1.0
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "nombre": "Malteada",
+      "categoria": "Entradas",
+      "subcategoria": "Bebidas",
+      "precio_venta": 49.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": [
+        {
+          "ingrediente_id": 30,
+          "cantidad": 0.25
+        },
+        {
+          "ingrediente_id": 79,
+          "cantidad": 1.0
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "nombre": "Cono Costillas",
+      "categoria": "Entradas",
+      "subcategoria": "Conos",
+      "precio_venta": 98.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 16,
+      "nombre": "Hamburguesa",
+      "categoria": "Sin categoría",
+      "subcategoria": null,
+      "precio_venta": 0.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 17,
+      "nombre": "Cono Banderillas",
+      "categoria": "Entradas",
+      "subcategoria": "Cono",
+      "precio_venta": 75.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 18,
+      "nombre": "Cono Alitas",
+      "categoria": "Platos fuertes",
+      "subcategoria": "Cono",
+      "precio_venta": 95.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": [
+        {
+          "ingrediente_id": 33,
+          "cantidad": 1.0
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "nombre": "Refresco lata",
+      "categoria": "Sin categoría",
+      "subcategoria": null,
+      "precio_venta": 0.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 21,
+      "nombre": "Zombie Kids",
+      "categoria": "Sin categoría",
+      "subcategoria": null,
+      "precio_venta": 0.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 22,
+      "nombre": "Pizza",
+      "categoria": "Sin categoría",
+      "subcategoria": null,
+      "precio_venta": 0.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 23,
+      "nombre": "Refresco Refil",
+      "categoria": "Sin categoría",
+      "subcategoria": null,
+      "precio_venta": 0.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 24,
+      "nombre": "Papas",
+      "categoria": "Sin categoría",
+      "subcategoria": null,
+      "precio_venta": 0.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 25,
+      "nombre": "Arizona",
+      "categoria": "Sin categoría",
+      "subcategoria": null,
+      "precio_venta": 0.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 26,
+      "nombre": "Flotante",
+      "categoria": "Sin categoría",
+      "subcategoria": null,
+      "precio_venta": 0.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 27,
+      "nombre": "Cerveza",
+      "categoria": "Sin categoría",
+      "subcategoria": null,
+      "precio_venta": 0.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 28,
+      "nombre": "Boba tea",
+      "categoria": "Sin categoría",
+      "subcategoria": null,
+      "precio_venta": 0.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 29,
+      "nombre": "Bubble Yakult",
+      "categoria": "Sin categoría",
+      "subcategoria": null,
+      "precio_venta": 0.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 30,
+      "nombre": "Ramen",
+      "categoria": "Sin categoría",
+      "subcategoria": null,
+      "precio_venta": 0.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 31,
+      "nombre": "Vaso Flotante",
+      "categoria": "Sin categoría",
+      "subcategoria": null,
+      "precio_venta": 0.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 32,
+      "nombre": "Agua",
+      "categoria": "Sin categoría",
+      "subcategoria": null,
+      "precio_venta": 0.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 35,
+      "nombre": "BBQ",
+      "categoria": "Sin categoría",
+      "subcategoria": null,
+      "precio_venta": 98.0,
+      "es_variante": true,
+      "articulo_padre_id": 20,
+      "composicion": []
+    },
+    {
+      "id": 36,
+      "nombre": "Cono Boneless - BBQ",
+      "categoria": "Platos fuertes",
+      "subcategoria": "Cono",
+      "precio_venta": 98.0,
+      "es_variante": true,
+      "articulo_padre_id": 11,
+      "composicion": [
+        {
+          "ingrediente_id": 10,
+          "cantidad": 0.25
+        },
+        {
+          "ingrediente_id": 33,
+          "cantidad": 1.0
+        },
+        {
+          "ingrediente_id": 65,
+          "cantidad": 1.0
+        }
+      ]
+    },
+    {
+      "id": 37,
+      "nombre": "Malteada - Vainilla",
+      "categoria": "Entradas",
+      "subcategoria": "Bebidas",
+      "precio_venta": 49.0,
+      "es_variante": true,
+      "articulo_padre_id": 14,
+      "composicion": [
+        {
+          "ingrediente_id": 30,
+          "cantidad": 0.25
+        },
+        {
+          "ingrediente_id": 79,
+          "cantidad": 1.0
+        }
+      ]
+    },
+    {
+      "id": 38,
+      "nombre": "Malteada - Chocolate",
+      "categoria": "Entradas",
+      "subcategoria": "Bebidas",
+      "precio_venta": 49.0,
+      "es_variante": true,
+      "articulo_padre_id": 14,
+      "composicion": [
+        {
+          "ingrediente_id": 30,
+          "cantidad": 0.25
+        },
+        {
+          "ingrediente_id": 79,
+          "cantidad": 1.0
+        }
+      ]
+    },
+    {
+      "id": 39,
+      "nombre": "Malteada - Fresa",
+      "categoria": "Entradas",
+      "subcategoria": "Bebidas",
+      "precio_venta": 49.0,
+      "es_variante": true,
+      "articulo_padre_id": 14,
+      "composicion": [
+        {
+          "ingrediente_id": 30,
+          "cantidad": 0.25
+        },
+        {
+          "ingrediente_id": 79,
+          "cantidad": 1.0
+        }
+      ]
+    },
+    {
+      "id": 40,
+      "nombre": "Cono Alitas - BBQ",
+      "categoria": "Platos fuertes",
+      "subcategoria": "Cono",
+      "precio_venta": 0.0,
+      "es_variante": true,
+      "articulo_padre_id": 18,
+      "composicion": []
+    },
+    {
+      "id": 41,
+      "nombre": "Cerveza - Negra Modelo",
+      "categoria": "Sin categoría",
+      "subcategoria": null,
+      "precio_venta": 0.0,
+      "es_variante": true,
+      "articulo_padre_id": 27,
+      "composicion": []
+    },
+    {
+      "id": 42,
+      "nombre": "Papas - Francesas",
+      "categoria": "Sin categoría",
+      "subcategoria": null,
+      "precio_venta": 0.0,
+      "es_variante": true,
+      "articulo_padre_id": 24,
+      "composicion": []
+    },
+    {
+      "id": 43,
+      "nombre": "Cono Alitas - Mango Hab",
+      "categoria": "Platos fuertes",
+      "subcategoria": "Cono",
+      "precio_venta": 0.0,
+      "es_variante": true,
+      "articulo_padre_id": 18,
+      "composicion": []
+    },
+    {
+      "id": 44,
+      "nombre": "Cono Boneless - Mango",
+      "categoria": "Platos fuertes",
+      "subcategoria": null,
+      "precio_venta": 98.0,
+      "es_variante": true,
+      "articulo_padre_id": 11,
+      "composicion": []
+    },
+    {
+      "id": 45,
+      "nombre": "Refresco lata - 7up",
+      "categoria": "Sin categoría",
+      "subcategoria": null,
+      "precio_venta": 0.0,
+      "es_variante": true,
+      "articulo_padre_id": 19,
+      "composicion": []
+    },
+    {
+      "id": 46,
+      "nombre": "Cono Boneless - Zombie Fuego",
+      "categoria": "Platos fuertes",
+      "subcategoria": null,
+      "precio_venta": 98.0,
+      "es_variante": true,
+      "articulo_padre_id": 11,
+      "composicion": []
+    },
+    {
+      "id": 47,
+      "nombre": "Zombie Kids - Hamburguesa",
+      "categoria": "Sin categoría",
+      "subcategoria": null,
+      "precio_venta": 0.0,
+      "es_variante": true,
+      "articulo_padre_id": 21,
+      "composicion": []
+    },
+    {
+      "id": 48,
+      "nombre": "Cono Boneless - Bufalo",
+      "categoria": "Platos fuertes",
+      "subcategoria": null,
+      "precio_venta": 98.0,
+      "es_variante": true,
+      "articulo_padre_id": 11,
+      "composicion": []
+    },
+    {
+      "id": 49,
+      "nombre": "Cono Costillas - Tamarindo",
+      "categoria": "Entradas",
+      "subcategoria": "Conos",
+      "precio_venta": 0.0,
+      "es_variante": true,
+      "articulo_padre_id": 15,
+      "composicion": []
+    },
+    {
+      "id": 50,
+      "nombre": "Ramen - Costillas",
+      "categoria": "Sin categoría",
+      "subcategoria": null,
+      "precio_venta": 0.0,
+      "es_variante": true,
+      "articulo_padre_id": 30,
+      "composicion": []
+    },
+    {
+      "id": 51,
+      "nombre": "Malteada - Algodon",
+      "categoria": "Entradas",
+      "subcategoria": null,
+      "precio_venta": 49.0,
+      "es_variante": true,
+      "articulo_padre_id": 14,
+      "composicion": []
+    },
+    {
+      "id": 52,
+      "nombre": "Malteada - Choc-Menta",
+      "categoria": "Entradas",
+      "subcategoria": null,
+      "precio_venta": 49.0,
+      "es_variante": true,
+      "articulo_padre_id": 14,
+      "composicion": []
+    },
+    {
+      "id": 53,
+      "nombre": "Cono Boneless - Tamarindo",
+      "categoria": "Platos fuertes",
+      "subcategoria": null,
+      "precio_venta": 98.0,
+      "es_variante": true,
+      "articulo_padre_id": 11,
+      "composicion": []
+    },
+    {
+      "id": 54,
+      "nombre": "Cono Alitas - Bufalo",
+      "categoria": "Platos fuertes",
+      "subcategoria": "Cono",
+      "precio_venta": 0.0,
+      "es_variante": true,
+      "articulo_padre_id": 18,
+      "composicion": []
+    },
+    {
+      "id": 55,
+      "nombre": "Papas - Gajo",
+      "categoria": "Conos",
+      "subcategoria": null,
+      "precio_venta": 55.0,
+      "es_variante": true,
+      "articulo_padre_id": 24,
+      "composicion": []
+    },
+    {
+      "id": 56,
+      "nombre": "Zombie Kids - Pizzas",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 115.0,
+      "es_variante": true,
+      "articulo_padre_id": 21,
+      "composicion": []
+    },
+    {
+      "id": 57,
+      "nombre": "Refresco lata - Mirinda",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 25.0,
+      "es_variante": true,
+      "articulo_padre_id": 19,
+      "composicion": []
+    },
+    {
+      "id": 58,
+      "nombre": "Malteada - Chicle",
+      "categoria": "Malteadas",
+      "subcategoria": null,
+      "precio_venta": 49.0,
+      "es_variante": true,
+      "articulo_padre_id": 14,
+      "composicion": []
+    },
+    {
+      "id": 59,
+      "nombre": "Refresco lata - Manzanita",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 25.0,
+      "es_variante": true,
+      "articulo_padre_id": 19,
+      "composicion": []
+    },
+    {
+      "id": 60,
+      "nombre": "Refresco lata - Pepsi",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 25.0,
+      "es_variante": true,
+      "articulo_padre_id": 19,
+      "composicion": []
+    },
+    {
+      "id": 61,
+      "nombre": "Refresco Refil - 7Up",
+      "categoria": "Refrescos",
+      "subcategoria": null,
+      "precio_venta": 35.0,
+      "es_variante": true,
+      "articulo_padre_id": 23,
+      "composicion": []
+    },
+    {
+      "id": 62,
+      "nombre": "Cono Costillas - BBQ",
+      "categoria": "Entradas",
+      "subcategoria": "Conos",
+      "precio_venta": 98.0,
+      "es_variante": true,
+      "articulo_padre_id": 15,
+      "composicion": []
+    },
+    {
+      "id": 63,
+      "nombre": "Cono Costillas - Bufalo",
+      "categoria": "Entradas",
+      "subcategoria": "Conos",
+      "precio_venta": 98.0,
+      "es_variante": true,
+      "articulo_padre_id": 15,
+      "composicion": []
+    },
+    {
+      "id": 64,
+      "nombre": "Zombie Kids - Boneless",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 115.0,
+      "es_variante": true,
+      "articulo_padre_id": 21,
+      "composicion": []
+    },
+    {
+      "id": 65,
+      "nombre": "Alitas - Tamarindo",
+      "categoria": "Platos fuertes",
+      "subcategoria": "Cono",
+      "precio_venta": 95.0,
+      "es_variante": true,
+      "articulo_padre_id": 18,
+      "composicion": []
+    },
+    {
+      "id": 66,
+      "nombre": "Cono Boneless - Agridulce",
+      "categoria": "Conos",
+      "subcategoria": null,
+      "precio_venta": 95.0,
+      "es_variante": true,
+      "articulo_padre_id": 11,
+      "composicion": []
+    },
+    {
+      "id": 67,
+      "nombre": "Zombie Kids - Alitas",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 115.0,
+      "es_variante": true,
+      "articulo_padre_id": 21,
+      "composicion": []
+    },
+    {
+      "id": 68,
+      "nombre": "Alitas - Zombie Fuego",
+      "categoria": "Platos fuertes",
+      "subcategoria": "Cono",
+      "precio_venta": 95.0,
+      "es_variante": true,
+      "articulo_padre_id": 18,
+      "composicion": []
+    },
+    {
+      "id": 69,
+      "nombre": "Refresco Refil - Mirinda",
+      "categoria": "Refrescos",
+      "subcategoria": null,
+      "precio_venta": 35.0,
+      "es_variante": true,
+      "articulo_padre_id": 23,
+      "composicion": []
+    },
+    {
+      "id": 70,
+      "nombre": "Refresco Refil - Manzanita",
+      "categoria": "Refrescos",
+      "subcategoria": null,
+      "precio_venta": 35.0,
+      "es_variante": true,
+      "articulo_padre_id": 23,
+      "composicion": []
+    },
+    {
+      "id": 71,
+      "nombre": "Cerveza - Modelo Especial",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 45.0,
+      "es_variante": true,
+      "articulo_padre_id": 27,
+      "composicion": []
+    },
+    {
+      "id": 72,
+      "nombre": "Combo Zombie Burger",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 135.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 73,
+      "nombre": "Combo Zombie Burger - Manzana",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 135.0,
+      "es_variante": true,
+      "articulo_padre_id": 72,
+      "composicion": []
+    },
+    {
+      "id": 74,
+      "nombre": "Zombie Kids - Banderillas",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 115.0,
+      "es_variante": true,
+      "articulo_padre_id": 21,
+      "composicion": []
+    },
+    {
+      "id": 75,
+      "nombre": "Caja para llevar",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 5.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 76,
+      "nombre": "Ramen - Boneless",
+      "categoria": "Conos",
+      "subcategoria": null,
+      "precio_venta": 130.0,
+      "es_variante": true,
+      "articulo_padre_id": 30,
+      "composicion": []
+    },
+    {
+      "id": 77,
+      "nombre": "Cono Costillas - Mango Habanero",
+      "categoria": "Entradas",
+      "subcategoria": "Conos",
+      "precio_venta": 98.0,
+      "es_variante": true,
+      "articulo_padre_id": 15,
+      "composicion": []
+    },
+    {
+      "id": 78,
+      "nombre": "Cono Boneless - Naturales",
+      "categoria": "Conos",
+      "subcategoria": null,
+      "precio_venta": 95.0,
+      "es_variante": true,
+      "articulo_padre_id": 11,
+      "composicion": []
+    },
+    {
+      "id": 79,
+      "nombre": "Cono Costillas - Naturales",
+      "categoria": "Entradas",
+      "subcategoria": "Conos",
+      "precio_venta": 98.0,
+      "es_variante": true,
+      "articulo_padre_id": 15,
+      "composicion": []
+    },
+    {
+      "id": 80,
+      "nombre": "Refresco Refil - Pepsi",
+      "categoria": "Refrescos",
+      "subcategoria": null,
+      "precio_venta": 35.0,
+      "es_variante": true,
+      "articulo_padre_id": 23,
+      "composicion": []
+    },
+    {
+      "id": 81,
+      "nombre": "Alitas - Naturales",
+      "categoria": "Platos fuertes",
+      "subcategoria": "Cono",
+      "precio_venta": 95.0,
+      "es_variante": true,
+      "articulo_padre_id": 18,
+      "composicion": []
+    },
+    {
+      "id": 82,
+      "nombre": "Alitas - Agridulce",
+      "categoria": "Platos fuertes",
+      "subcategoria": "Cono",
+      "precio_venta": 95.0,
+      "es_variante": true,
+      "articulo_padre_id": 18,
+      "composicion": []
+    },
+    {
+      "id": 83,
+      "nombre": "Mogu mogu",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 55.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 84,
+      "nombre": "Combo Zombie Burger - Limon",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 135.0,
+      "es_variante": true,
+      "articulo_padre_id": 72,
+      "composicion": []
+    },
+    {
+      "id": 85,
+      "nombre": "Combo Zombie Burger - Cola",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 135.0,
+      "es_variante": true,
+      "articulo_padre_id": 72,
+      "composicion": []
+    },
+    {
+      "id": 86,
+      "nombre": "Combo Boneless",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 135.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 87,
+      "nombre": "Combo Boneless - Agridulce",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 135.0,
+      "es_variante": true,
+      "articulo_padre_id": 86,
+      "composicion": []
+    },
+    {
+      "id": 88,
+      "nombre": "Refresco Refil - Squirt",
+      "categoria": "Refrescos",
+      "subcategoria": null,
+      "precio_venta": 35.0,
+      "es_variante": true,
+      "articulo_padre_id": 23,
+      "composicion": []
+    },
+    {
+      "id": 89,
+      "nombre": "Combo Boneless - Zombie",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 135.0,
+      "es_variante": true,
+      "articulo_padre_id": 86,
+      "composicion": []
+    },
+    {
+      "id": 90,
+      "nombre": "Combo Boneless - Mango",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 135.0,
+      "es_variante": true,
+      "articulo_padre_id": 86,
+      "composicion": []
+    },
+    {
+      "id": 91,
+      "nombre": "Zombie soda",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 25.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 92,
+      "nombre": "Cono Costillas - Zombie Fuego",
+      "categoria": "Entradas",
+      "subcategoria": "Conos",
+      "precio_venta": 98.0,
+      "es_variante": true,
+      "articulo_padre_id": 15,
+      "composicion": []
+    },
+    {
+      "id": 93,
+      "nombre": "Combo Boneless - BBQ",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 135.0,
+      "es_variante": true,
+      "articulo_padre_id": 86,
+      "composicion": []
+    },
+    {
+      "id": 94,
+      "nombre": "Combo Boneless - Bufalo",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 135.0,
+      "es_variante": true,
+      "articulo_padre_id": 86,
+      "composicion": []
+    },
+    {
+      "id": 95,
+      "nombre": "Cono Costillas - Agridulce",
+      "categoria": "Entradas",
+      "subcategoria": "Conos",
+      "precio_venta": 98.0,
+      "es_variante": true,
+      "articulo_padre_id": 15,
+      "composicion": []
+    },
+    {
+      "id": 96,
+      "nombre": "Combo Boneless - Tamarindo",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 135.0,
+      "es_variante": true,
+      "articulo_padre_id": 86,
+      "composicion": []
+    },
+    {
+      "id": 97,
+      "nombre": "Refresco lata - Squirt",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 25.0,
+      "es_variante": true,
+      "articulo_padre_id": 19,
+      "composicion": []
+    },
+    {
+      "id": 98,
+      "nombre": "Combo Zombie Burger - Naranja",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 135.0,
+      "es_variante": true,
+      "articulo_padre_id": 72,
+      "composicion": []
+    },
+    {
+      "id": 99,
+      "nombre": "Suspiro",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 65.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 100,
+      "nombre": "Promo Alitas Jueves",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 270.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 101,
+      "nombre": "Cubeta",
+      "categoria": "Bebidas",
+      "subcategoria": null,
+      "precio_venta": 150.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 102,
+      "nombre": "Cubeta - Victoria",
+      "categoria": "Bebidas",
+      "subcategoria": null,
+      "precio_venta": 150.0,
+      "es_variante": true,
+      "articulo_padre_id": 101,
+      "composicion": []
+    },
+    {
+      "id": 103,
+      "nombre": "Cerveza - Negra Modelo / Modelo Especial",
+      "categoria": "Bebidas",
+      "subcategoria": null,
+      "precio_venta": 40.0,
+      "es_variante": true,
+      "articulo_padre_id": 27,
+      "composicion": []
+    },
+    {
+      "id": 104,
+      "nombre": "Cubeta - Corona",
+      "categoria": "Bebidas",
+      "subcategoria": null,
+      "precio_venta": 150.0,
+      "es_variante": true,
+      "articulo_padre_id": 101,
+      "composicion": []
+    },
+    {
+      "id": 105,
+      "nombre": "Promo San Valentin",
+      "categoria": "Conos",
+      "subcategoria": null,
+      "precio_venta": 268.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 106,
+      "nombre": "Cerveza chica",
+      "categoria": "Bebidas",
+      "subcategoria": null,
+      "precio_venta": 30.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 107,
+      "nombre": "Cerveza chica - Corona",
+      "categoria": "Bebidas",
+      "subcategoria": null,
+      "precio_venta": 30.0,
+      "es_variante": true,
+      "articulo_padre_id": 106,
+      "composicion": []
+    },
+    {
+      "id": 108,
+      "nombre": "Pastel 3 leches",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 60.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 109,
+      "nombre": "Cerveza chica - Victoria",
+      "categoria": "Bebidas",
+      "subcategoria": null,
+      "precio_venta": 30.0,
+      "es_variante": true,
+      "articulo_padre_id": 106,
+      "composicion": []
+    },
+    {
+      "id": 110,
+      "nombre": "Pay limón",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 60.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 111,
+      "nombre": "Pastel triple chocolate",
+      "categoria": "",
+      "subcategoria": null,
+      "precio_venta": 60.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    },
+    {
+      "id": 112,
+      "nombre": "Icee",
+      "categoria": "Icee",
+      "subcategoria": null,
+      "precio_venta": 25.0,
+      "es_variante": false,
+      "articulo_padre_id": null,
+      "composicion": []
+    }
+  ]
+}
