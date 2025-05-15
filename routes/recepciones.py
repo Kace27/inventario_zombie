@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app
 import sqlite3
 from datetime import datetime
-from database import get_db
+from database import get_db, get_db_cursor, backup_db, verify_db_integrity
 from utils.error_handler import handle_error
 from utils.validators import validate_required_fields, validate_numeric_value
 
@@ -108,20 +108,6 @@ def get_recepciones():
 def create_recepcion():
     """
     Create a new kitchen reception and update ingredient inventory.
-    
-    Expected request body:
-    {
-        "ingredientes": [
-            {
-                "ingrediente_id": integer,
-                "cantidad_recibida": float
-            }
-        ],
-        "notas": string (optional)
-    }
-    
-    Returns:
-    - JSON response with the created reception
     """
     try:
         # Get request data
@@ -153,31 +139,44 @@ def create_recepcion():
                     "success": False,
                     "error": validation_result['error']
                 }), 400
-        
-        db = get_db()
-        cursor = db.cursor()
-        
-        # Validate that all ingredients exist
-        for ingrediente in data['ingredientes']:
-            cursor.execute(
-                "SELECT id, nombre FROM Ingredientes WHERE id = ?",
-                (ingrediente['ingrediente_id'],)
-            )
-            if not cursor.fetchone():
-                return jsonify({
-                    "success": False,
-                    "error": f"No existe el ingrediente con ID {ingrediente['ingrediente_id']}"
-                }), 404
-        
-        # Get current date and time
-        now = datetime.now()
-        fecha_recepcion = now.strftime('%Y-%m-%d')
-        hora_recepcion = now.strftime('%H:%M:%S')
-        
-        # Begin transaction
-        cursor.execute("BEGIN TRANSACTION")
-        
+
+        # Verificar integridad de la base de datos antes de proceder
+        if not verify_db_integrity():
+            current_app.logger.error("Se detectó un problema de integridad en la base de datos")
+            return jsonify({
+                "success": False,
+                "error": "Error de integridad en la base de datos"
+            }), 500
+
+        # Crear backup antes de la operación
         try:
+            backup_path = backup_db()
+            current_app.logger.info(f"Backup creado en: {backup_path}")
+        except Exception as e:
+            current_app.logger.error(f"Error al crear backup: {str(e)}")
+            return jsonify({
+                "success": False,
+                "error": "Error al crear backup de seguridad"
+            }), 500
+        
+        with get_db_cursor() as cursor:
+            # Validate that all ingredients exist
+            for ingrediente in data['ingredientes']:
+                cursor.execute(
+                    "SELECT id, nombre FROM Ingredientes WHERE id = ?",
+                    (ingrediente['ingrediente_id'],)
+                )
+                if not cursor.fetchone():
+                    return jsonify({
+                        "success": False,
+                        "error": f"No existe el ingrediente con ID {ingrediente['ingrediente_id']}"
+                    }), 404
+            
+            # Get current date and time
+            now = datetime.now()
+            fecha_recepcion = now.strftime('%Y-%m-%d')
+            hora_recepcion = now.strftime('%H:%M:%S')
+            
             # Insert reception record
             cursor.execute(
                 """
@@ -188,53 +187,74 @@ def create_recepcion():
                 (fecha_recepcion, hora_recepcion, data.get('notas', ''))
             )
             
+            # Log the reception creation
+            current_app.logger.info(
+                f"Nueva recepción creada - ID: {cursor.lastrowid}, "
+                f"Fecha: {fecha_recepcion}, Hora: {hora_recepcion}"
+            )
+            
             # Get the ID of the inserted reception
             recepcion_id = cursor.lastrowid
             
             # Insert reception details and update inventory for each ingredient
             ingredientes_info = []
             for ingrediente in data['ingredientes']:
-                # Get ingredient info
-                cursor.execute(
-                    "SELECT nombre, unidad_medida FROM Ingredientes WHERE id = ?",
-                    (ingrediente['ingrediente_id'],)
-                )
-                ing_info = cursor.fetchone()
-                
-                # Insert reception detail
-                cursor.execute(
-                    """
-                    INSERT INTO RecepcionesDetalles 
-                    (recepcion_id, ingrediente_id, cantidad_recibida)
-                    VALUES (?, ?, ?)
-                    """,
-                    (
-                        recepcion_id,
-                        ingrediente['ingrediente_id'],
-                        ingrediente['cantidad_recibida']
+                try:
+                    # Get ingredient info
+                    cursor.execute(
+                        "SELECT nombre, unidad_medida FROM Ingredientes WHERE id = ?",
+                        (ingrediente['ingrediente_id'],)
                     )
-                )
-                
-                # Update ingredient inventory
-                cursor.execute(
-                    """
-                    UPDATE Ingredientes
-                    SET cantidad_actual = cantidad_actual + ?
-                    WHERE id = ?
-                    """,
-                    (ingrediente['cantidad_recibida'], ingrediente['ingrediente_id'])
-                )
-                
-                # Store ingredient info for response
-                ingredientes_info.append({
-                    'ingrediente_id': ingrediente['ingrediente_id'],
-                    'ingrediente_nombre': ing_info['nombre'],
-                    'unidad_medida': ing_info['unidad_medida'],
-                    'cantidad_recibida': ingrediente['cantidad_recibida']
-                })
+                    ing_info = cursor.fetchone()
+                    
+                    # Insert reception detail
+                    cursor.execute(
+                        """
+                        INSERT INTO RecepcionesDetalles 
+                        (recepcion_id, ingrediente_id, cantidad_recibida)
+                        VALUES (?, ?, ?)
+                        """,
+                        (
+                            recepcion_id,
+                            ingrediente['ingrediente_id'],
+                            ingrediente['cantidad_recibida']
+                        )
+                    )
+                    
+                    # Update ingredient inventory
+                    cursor.execute(
+                        """
+                        UPDATE Ingredientes
+                        SET cantidad_actual = cantidad_actual + ?
+                        WHERE id = ?
+                        """,
+                        (ingrediente['cantidad_recibida'], ingrediente['ingrediente_id'])
+                    )
+                    
+                    # Log the ingredient update
+                    current_app.logger.info(
+                        f"Actualizado ingrediente {ing_info['nombre']} - "
+                        f"Cantidad recibida: {ingrediente['cantidad_recibida']}"
+                    )
+                    
+                    # Store ingredient info for response
+                    ingredientes_info.append({
+                        'ingrediente_id': ingrediente['ingrediente_id'],
+                        'ingrediente_nombre': ing_info['nombre'],
+                        'unidad_medida': ing_info['unidad_medida'],
+                        'cantidad_recibida': ingrediente['cantidad_recibida']
+                    })
+                    
+                except Exception as e:
+                    current_app.logger.error(
+                        f"Error al procesar ingrediente {ingrediente['ingrediente_id']}: {str(e)}"
+                    )
+                    raise
             
-            # Commit the transaction
-            db.commit()
+            # Verificar integridad después de la operación
+            if not verify_db_integrity():
+                current_app.logger.error("Se detectó un problema de integridad después de la operación")
+                raise Exception("Error de integridad después de la operación")
             
             # Return the created reception
             return jsonify({
@@ -249,12 +269,8 @@ def create_recepcion():
                 }
             })
             
-        except Exception as e:
-            # Rollback on error
-            db.rollback()
-            return jsonify({"success": False, "error": str(e)}), 500
-            
     except Exception as e:
+        current_app.logger.error(f"Error al crear recepción: {str(e)}")
         return handle_error(str(e))
 
 @bp.route('/<int:id>', methods=['GET'])
