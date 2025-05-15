@@ -3,6 +3,7 @@ import sqlite3
 from database import get_db
 from utils.csv_parser import parse_csv, validate_sales_data, parse_receipts_data, format_date
 from utils.error_handler import handle_error
+from utils.sales_predictor import get_sales_predictor
 import json
 import datetime
 import re
@@ -865,4 +866,337 @@ def get_tickets():
         
     except Exception as e:
         current_app.logger.error(f"Error getting tickets: {str(e)}")
-        return handle_error(e, "Error retrieving tickets") 
+        return handle_error(e, "Error retrieving tickets")
+
+@bp.route('/prediccion', methods=['GET'])
+def predecir_ventas():
+    """
+    Predict sales for a specific date based on historical data.
+    
+    Query parameters:
+    - fecha: Target date for prediction (YYYY-MM-DD). Default is tomorrow.
+    - num_semanas: Number of past weeks to analyze. Default is 4.
+    - categoria: Optional category filter.
+    - articulo: Optional article filter.
+    
+    Returns:
+    - JSON response with sales predictions
+    """
+    try:
+        # Get query parameters
+        target_date = request.args.get('fecha')
+        num_weeks = int(request.args.get('num_semanas', 4))
+        category = request.args.get('categoria')
+        article = request.args.get('articulo')
+        
+        # If no date is provided, use tomorrow's date
+        if not target_date:
+            tomorrow = datetime.datetime.now() + datetime.timedelta(days=1)
+            target_date = tomorrow.strftime('%Y-%m-%d')
+        
+        # Validate date format
+        try:
+            datetime.datetime.strptime(target_date, '%Y-%m-%d')
+        except ValueError:
+            return jsonify({
+                "success": False,
+                "error": "Formato de fecha inválido. Debe ser YYYY-MM-DD"
+            }), 400
+        
+        # Get predictor and make prediction
+        predictor = get_sales_predictor()
+        try:
+            prediction_results = predictor.predict_sales_for_date(
+                target_date, 
+                num_weeks=num_weeks,
+                category=category,
+                article=article
+            )
+            predictor.close()
+            
+            return jsonify({
+                "success": True,
+                "data": prediction_results
+            })
+        except Exception as e:
+            predictor.close()
+            raise e
+        
+    except Exception as e:
+        return handle_error(f"Error al predecir ventas: {str(e)}")
+
+@bp.route('/prediccion-avanzada', methods=['POST'])
+def prediccion_avanzada():
+    """
+    Advanced sales prediction endpoint that allows for more detailed analysis
+    including batch predictions for multiple dates, categories, or articles.
+    
+    Expected request body:
+    {
+        "fechas": ["YYYY-MM-DD", ...],  // Optional, list of target dates
+        "dias_semana": [0,1,2,3,4,5,6],  // Optional, list of weekdays (0=Monday, 6=Sunday)
+        "num_semanas": 4,  // Optional, number of weeks to analyze
+        "categorias": ["cat1", "cat2", ...],  // Optional, list of categories
+        "articulos": ["art1", "art2", ...],  // Optional, list of articles
+        "agrupar_por": "categoria"  // Optional, group results by "categoria", "dia", "articulo"
+    }
+    
+    Returns:
+    - JSON response with detailed sales predictions
+    """
+    try:
+        # Get request body
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                "success": False,
+                "error": "Se requiere un cuerpo de solicitud JSON"
+            }), 400
+        
+        # Extract parameters
+        target_dates = data.get('fechas', [])
+        weekdays = data.get('dias_semana', [])
+        num_weeks = data.get('num_semanas', 4)
+        categories = data.get('categorias', [])
+        articles = data.get('articulos', [])
+        group_by = data.get('agrupar_por')
+        
+        # If no dates and no weekdays specified, use next 7 days
+        if not target_dates and not weekdays:
+            today = datetime.datetime.now().date()
+            target_dates = [
+                (today + datetime.timedelta(days=i)).strftime('%Y-%m-%d')
+                for i in range(1, 8)  # Next 7 days
+            ]
+        
+        # If weekdays specified, find next occurrence of each weekday
+        if weekdays and not target_dates:
+            today = datetime.datetime.now().date()
+            target_dates = []
+            for weekday in weekdays:
+                days_ahead = weekday - today.weekday()
+                if days_ahead <= 0:  # Target day already happened this week
+                    days_ahead += 7
+                target_date = today + datetime.timedelta(days=days_ahead)
+                target_dates.append(target_date.strftime('%Y-%m-%d'))
+        
+        # Validate date formats
+        for date in target_dates:
+            try:
+                datetime.datetime.strptime(date, '%Y-%m-%d')
+            except ValueError:
+                return jsonify({
+                    "success": False,
+                    "error": f"Formato de fecha inválido: {date}. Debe ser YYYY-MM-DD"
+                }), 400
+        
+        # Create predictor and results container
+        predictor = get_sales_predictor()
+        results = {
+            "summary": {
+                "total_predicted": 0,
+                "dates_analyzed": len(target_dates),
+                "num_weeks_analyzed": num_weeks
+            },
+            "predictions": []
+        }
+        
+        try:
+            # Process each target date
+            for target_date in target_dates:
+                # Process each category if specified
+                if categories:
+                    for category in categories:
+                        # Process predictions for this date and category
+                        prediction = predictor.predict_sales_for_date(
+                            target_date,
+                            num_weeks=num_weeks,
+                            category=category
+                        )
+                        
+                        # Add to results
+                        results["predictions"].append({
+                            "fecha": target_date,
+                            "dia_semana": prediction["weekday_name"],
+                            "categoria": category,
+                            "total_predecido": prediction["total_predicted"],
+                            "articulos": prediction["predictions"]
+                        })
+                        
+                        # Update summary
+                        results["summary"]["total_predicted"] += prediction["total_predicted"]
+                
+                # Process each article if specified
+                elif articles:
+                    for article in articles:
+                        # Process predictions for this date and article
+                        prediction = predictor.predict_sales_for_date(
+                            target_date,
+                            num_weeks=num_weeks,
+                            article=article
+                        )
+                        
+                        if article in prediction["predictions"]:
+                            # Add to results
+                            results["predictions"].append({
+                                "fecha": target_date,
+                                "dia_semana": prediction["weekday_name"],
+                                "articulo": article,
+                                "cantidad_predecida": prediction["predictions"][article]["predicted_sales"],
+                                "datos_historicos": prediction["predictions"][article]["historical_data"]
+                            })
+                            
+                            # Update summary
+                            results["summary"]["total_predicted"] += prediction["predictions"][article]["predicted_sales"]
+                
+                # Process all data for this date if no specific filters
+                else:
+                    prediction = predictor.predict_sales_for_date(
+                        target_date,
+                        num_weeks=num_weeks
+                    )
+                    
+                    # Add to results
+                    results["predictions"].append({
+                        "fecha": target_date,
+                        "dia_semana": prediction["weekday_name"],
+                        "total_predecido": prediction["total_predicted"],
+                        "articulos": prediction["predictions"]
+                    })
+                    
+                    # Update summary
+                    results["summary"]["total_predicted"] += prediction["total_predicted"]
+            
+            # Group results if requested
+            if group_by:
+                grouped_results = {}
+                
+                if group_by == "categoria":
+                    # Get database connection for category lookup
+                    db = get_db()
+                    cursor = db.cursor()
+                    
+                    # Create category mapping for all articles
+                    all_articles = set()
+                    for prediction in results["predictions"]:
+                        if "articulos" in prediction:
+                            all_articles.update(prediction["articulos"].keys())
+                    
+                    # Get categories for all articles
+                    article_categories = {}
+                    for article in all_articles:
+                        cursor.execute(
+                            "SELECT categoria FROM ArticulosVendidos WHERE nombre = ?",
+                            (article,)
+                        )
+                        result = cursor.fetchone()
+                        if result:
+                            article_categories[article] = result["categoria"]
+                    
+                    # Group by category
+                    for prediction in results["predictions"]:
+                        if "articulos" in prediction:
+                            for article, data in prediction["articulos"].items():
+                                category = article_categories.get(article, "Sin categoría")
+                                
+                                # Initialize category if not exists
+                                if category not in grouped_results:
+                                    grouped_results[category] = {
+                                        "total_predecido": 0,
+                                        "articulos": {}
+                                    }
+                                
+                                # Initialize article if not exists in this category
+                                if article not in grouped_results[category]["articulos"]:
+                                    grouped_results[category]["articulos"][article] = 0
+                                
+                                # Add prediction
+                                grouped_results[category]["articulos"][article] += data["predicted_sales"]
+                                grouped_results[category]["total_predecido"] += data["predicted_sales"]
+                    
+                    # Replace predictions with grouped results
+                    results["grouped_by"] = "categoria"
+                    results["predictions"] = [
+                        {"categoria": category, **data}
+                        for category, data in grouped_results.items()
+                    ]
+                
+                elif group_by == "dia":
+                    # Group by weekday
+                    weekday_mapping = {}
+                    
+                    for prediction in results["predictions"]:
+                        weekday = prediction["dia_semana"]
+                        
+                        # Initialize weekday if not exists
+                        if weekday not in weekday_mapping:
+                            weekday_mapping[weekday] = {
+                                "total_predecido": 0,
+                                "articulos": {}
+                            }
+                        
+                        # Add data for this weekday
+                        if "articulos" in prediction:
+                            for article, data in prediction["articulos"].items():
+                                # Initialize article if not exists for this weekday
+                                if article not in weekday_mapping[weekday]["articulos"]:
+                                    weekday_mapping[weekday]["articulos"][article] = 0
+                                
+                                # Add prediction
+                                weekday_mapping[weekday]["articulos"][article] += data["predicted_sales"]
+                                weekday_mapping[weekday]["total_predecido"] += data["predicted_sales"]
+                    
+                    # Replace predictions with grouped results
+                    results["grouped_by"] = "dia_semana"
+                    results["predictions"] = [
+                        {"dia_semana": day, **data}
+                        for day, data in weekday_mapping.items()
+                    ]
+                
+                elif group_by == "articulo":
+                    # Group by article
+                    article_mapping = {}
+                    
+                    for prediction in results["predictions"]:
+                        if "articulos" in prediction:
+                            for article, data in prediction["articulos"].items():
+                                # Initialize article if not exists
+                                if article not in article_mapping:
+                                    article_mapping[article] = {
+                                        "total_predecido": 0,
+                                        "por_dia": {}
+                                    }
+                                
+                                # Initialize weekday if not exists for this article
+                                weekday = prediction["dia_semana"]
+                                if weekday not in article_mapping[article]["por_dia"]:
+                                    article_mapping[article]["por_dia"][weekday] = 0
+                                
+                                # Add prediction
+                                article_mapping[article]["por_dia"][weekday] += data["predicted_sales"]
+                                article_mapping[article]["total_predecido"] += data["predicted_sales"]
+                    
+                    # Replace predictions with grouped results
+                    results["grouped_by"] = "articulo"
+                    results["predictions"] = [
+                        {"articulo": article, **data}
+                        for article, data in article_mapping.items()
+                    ]
+            
+            # Close the predictor connection
+            predictor.close()
+            
+            # Round the total predicted value in summary
+            results["summary"]["total_predicted"] = round(results["summary"]["total_predicted"], 2)
+            
+            return jsonify({
+                "success": True,
+                "data": results
+            })
+            
+        except Exception as e:
+            predictor.close()
+            raise e
+        
+    except Exception as e:
+        return handle_error(f"Error en predicción avanzada: {str(e)}") 
